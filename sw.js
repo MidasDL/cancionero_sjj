@@ -1,5 +1,5 @@
 /* Service Worker — Cancionero SJJ */
-const CACHE = 'sjj-v1';
+const CACHE = 'sjj-v2';
 
 const PRECACHE = [
   './',
@@ -40,10 +40,16 @@ self.addEventListener('fetch', evt => {
   const { request } = evt;
   const url = new URL(request.url);
 
-  // Navigation requests → always serve index.html (handles ?c= params too)
+  // Navigation requests → network first, fallback to cache (ensures updates are picked up)
   if (request.mode === 'navigate') {
     evt.respondWith(
-      caches.match('./index.html').then(r => r || fetch(request))
+      fetch(request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(request, clone));
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
