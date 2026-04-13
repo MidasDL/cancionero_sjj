@@ -1,5 +1,5 @@
 /* Service Worker — Cancionero SJJ */
-const CACHE = 'sjj-v2';
+const CACHE = 'sjj-v3';
 
 const PRECACHE = [
   './',

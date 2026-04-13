@@ -368,8 +368,13 @@
 				color: var(--muted);
 			}
 			@keyframes apulse {
-				0%, 100% { opacity: 0.7; }
-				50%       { opacity: 1;   }
+				0%,
+				100% {
+					opacity: 0.7;
+				}
+				50% {
+					opacity: 1;
+				}
 			}
 
 			/* ── Utility ────────────────────────────────────── */
@@ -565,8 +570,8 @@
 					ttsBusy = false;
 					// Señal háptica y visual para que el usuario toque la pantalla
 					_startHapticPulse();
-					document.getElementById('audio-prompt').classList.add('on');
-					document.body.classList.add('audio-locked');
+					document.getElementById("audio-prompt").classList.add("on");
+					document.body.classList.add("audio-locked");
 					return;
 				}
 				ttsBusy = true;
@@ -588,20 +593,28 @@
 			let _hapticPulseTimer = null;
 
 			function _startHapticPulse() {
-				if (_hapticPulseTimer !== null) return;
-				function _beat() {
-					if (navigator.vibrate) navigator.vibrate([55, 55, 110, 780]);
-					_hapticPulseTimer = setTimeout(_beat, 1000);
+				try {
+					if (_hapticPulseTimer !== null) return;
+					function _beat() {
+						if (navigator.vibrate) navigator.vibrate([55, 55, 110, 780]);
+						_hapticPulseTimer = setTimeout(_beat, 1000);
+					}
+					_beat();
+				} catch (e) {
+					console.error("Error al iniciar el pulso háptico:", e);
 				}
-				_beat();
 			}
 
 			function _stopHapticPulse() {
-				if (_hapticPulseTimer !== null) {
-					clearTimeout(_hapticPulseTimer);
-					_hapticPulseTimer = null;
+				try {
+					if (_hapticPulseTimer !== null) {
+						clearTimeout(_hapticPulseTimer);
+						_hapticPulseTimer = null;
+					}
+					if (navigator.vibrate) navigator.vibrate(0);
+				} catch (e) {
+					console.error("Error al detener el pulso háptico:", e);
 				}
-				if (navigator.vibrate) navigator.vibrate(0);
 			}
 
 			// Desbloquear TTS en el primer gesto del usuario (toque, clic o tecla).
@@ -612,57 +625,74 @@
 				_audioUnlocked = true;
 				_unlockTs = Date.now();
 				_stopHapticPulse();
-				const prompt = document.getElementById('audio-prompt');
-				prompt.classList.remove('on');
-				document.body.classList.remove('audio-locked');
+				const prompt = document.getElementById("audio-prompt");
+				prompt.classList.remove("on");
+				document.body.classList.remove("audio-locked");
 				// Restaurar contenido original por si fue modificado al conectar el mando
-				prompt.querySelector('.ap-icon').textContent = '🔊';
-				prompt.querySelector('.ap-msg').textContent = 'Toca la pantalla para activar el audio';
-				prompt.querySelector('.ap-sub').textContent = 'La canción está lista para reproducirse';
-				// Limpiar cola pendiente; el llamador es responsable de hablar el mensaje
-				speechSynthesis.cancel();
+				prompt.querySelector(".ap-icon").textContent = "🔊";
+				prompt.querySelector(".ap-msg").textContent =
+					"Toca la pantalla para activar el audio";
+				prompt.querySelector(".ap-sub").textContent =
+					"La canción está lista para reproducirse";
+				// Limpiar cola JS; NO llamar speechSynthesis.cancel() aquí porque
+				// speak(text, true) ya lo hace justo después, y el doble cancel()
+				// en Android Chrome hace que el siguiente speak() falle silenciosamente.
 				ttsQ = [];
 				ttsBusy = false;
 			}
 
 			// Devuelve el texto del título de la vista actual (sin hablar)
 			function _currentTitleText() {
-				if (S.mode === 'SONG' && S.songNum) {
-					const song = S.songs.find(function(s) { return s.song === S.songNum; });
-					if (song) return 'Canción ' + S.songNum + '. ' + song.title + '.';
+				if (S.mode === "SONG" && S.songNum) {
+					const song = S.songs.find(function (s) {
+						return s.song === S.songNum;
+					});
+					if (song) return "Canción " + S.songNum + ". " + song.title + ".";
 				}
 				const c = S.cats[S.catIdx];
 				const ss = songsInCat(S.catIdx);
 				const sel = ss[S.songIdxInCat];
-				if (c && sel) return c.category + '. Canción ' + sel.song + '. ' + sel.title + '.';
-				return 'Menú principal.';
+				if (c && sel)
+					return c.category + ". Canción " + sel.song + ". " + sel.title + ".";
+				return "Menú principal.";
 			}
 
-			['touchstart', 'click', 'keydown'].forEach(function (ev) {
-				document.addEventListener(ev, function _unlockGesture(e) {
-					if (document.getElementById('audio-prompt').classList.contains('on')) {
-						// Evitar que el gesto traspase el banner hacia elementos de fondo
-						e.stopPropagation();
-						_unlockAudio();
-						snd('enter');
-						// Mensaje de confirmación primero, luego el título en cola
-						speak('Pantalla activada.', true);
-						speak(_currentTitleText());
-					} else {
-						_unlockAudio();
-					}
-				}, { once: true, capture: true });
+			["touchstart", "click", "keydown"].forEach(function (ev) {
+				document.addEventListener(
+					ev,
+					function _unlockGesture(e) {
+						if (
+							document.getElementById("audio-prompt").classList.contains("on")
+						) {
+							// Evitar que el gesto traspase el banner hacia elementos de fondo
+							//e.stopPropagation();
+							snd("enter");
+							_unlockAudio();
+							// Mensaje de confirmación primero, luego el título en cola
+							speak("Pantalla activada.", true);
+							speak(_currentTitleText());
+							alert(1);
+						} else {
+							_unlockAudio();
+						}
+					},
+					{ once: true, capture: true }
+				);
 			});
 
 			// Swallowear ghost clicks/touchstart que el navegador sintetiza
 			// justo después de que el banner desaparece (600 ms de ventana).
-			['click', 'touchstart'].forEach(function(ev) {
-				document.addEventListener(ev, function _ghostGuard(e) {
-					if (_unlockTs && Date.now() - _unlockTs < 600) {
-						e.stopPropagation();
-						e.preventDefault();
-					}
-				}, { capture: true, passive: false });
+			["click", "touchstart"].forEach(function (ev) {
+				document.addEventListener(
+					ev,
+					function _ghostGuard(e) {
+						if (_unlockTs && Date.now() - _unlockTs < 600) {
+							//e.stopPropagation();
+							e.preventDefault();
+						}
+					},
+					{ capture: true, passive: false }
+				);
 			});
 
 			function ariaAnn(t) {
@@ -1318,7 +1348,7 @@
 			// que lo activó no dispare ninguna acción en ese mismo frame.
 			function seedGamepad(gp) {
 				gp.buttons.forEach(function (btn, i) {
-					prevBtns[gp.index + '_' + i] = btn.pressed;
+					prevBtns[gp.index + "_" + i] = btn.pressed;
 				});
 			}
 
@@ -1383,7 +1413,7 @@
 
 			// Reiniciar el loop si requestAnimationFrame se pausó mientras el micrófono
 			// estaba activo (p.ej. la PWA pasó a segundo plano durante la búsqueda por voz).
-			document.addEventListener('visibilitychange', function () {
+			document.addEventListener("visibilitychange", function () {
 				if (!document.hidden) {
 					if (_gpRafId !== null) cancelAnimationFrame(_gpRafId);
 					_gpRafId = null;
@@ -1396,11 +1426,11 @@
 				document.getElementById("gp-status").className = "gp-status";
 				vib([30, 20, 30]);
 				// Si el banner está visible, actualizarlo antes de ocultarlo
-				const prompt = document.getElementById('audio-prompt');
-				if (prompt.classList.contains('on')) {
-					prompt.querySelector('.ap-icon').textContent = '🎮';
-					prompt.querySelector('.ap-msg').textContent = 'Mando conectado';
-					prompt.querySelector('.ap-sub').textContent = '';
+				const prompt = document.getElementById("audio-prompt");
+				if (prompt.classList.contains("on")) {
+					prompt.querySelector(".ap-icon").textContent = "🎮";
+					prompt.querySelector(".ap-msg").textContent = "Mando conectado";
+					prompt.querySelector(".ap-sub").textContent = "";
 				}
 				// Desbloquear primero; luego hablar (el audio ya está disponible)
 				_unlockAudio();
