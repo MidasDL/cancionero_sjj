@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, user-scalable=no"
+		/>
+		<meta name="theme-color" content="#0a0a1a" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta
+			name="apple-mobile-web-app-status-bar-style"
+			content="black-translucent"
+		/>
+		<meta name="apple-mobile-web-app-title" content="Cancionero" />
+		<link rel="manifest" href="manifest.json" />
+		<link rel="icon" href="icon/favicon.ico" />
+		<link rel="apple-touch-icon" href="icon/apple-touch-icon.png" />
+		<title>Cancionero SJJ</title>
+		<style>
+			:root {
+				--bg: #0a0a1a;
+				--surface: #13132b;
+				--primary: #5b9fff;
+				--accent: #ff6b4a;
+				--text: #eeeef8;
+				--muted: #7777aa;
+				--highlight: #ffd700;
+				--success: #44dd88;
+				--border: #22224a;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				background: var(--bg);
+				color: var(--text);
+				font-family: "Segoe UI", system-ui, sans-serif;
+				height: 100dvh;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+				user-select: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			/* ── Status bar ─────────────────────────────────── */
+			#status-bar {
+				background: var(--surface);
+				padding: 6px 14px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				font-size: 13px;
+				color: var(--muted);
+				border-bottom: 1px solid var(--border);
+				flex-shrink: 0;
+			}
+			#gp-status {
+				color: var(--success);
+				transition: color 0.3s;
+			}
+			#gp-status.off {
+				color: var(--accent);
+			}
+
+			/* ── Main area ──────────────────────────────────── */
+			#main {
+				flex: 1;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+			}
+
+			/* ── MENU VIEW ──────────────────────────────────── */
+			#menu-view {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				padding: 14px 16px 0;
+				overflow: hidden;
+			}
+
+			.cat-nav {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin-bottom: 6px;
+			}
+			.cat-arrow {
+				font-size: 22px;
+				color: var(--muted);
+				flex-shrink: 0;
+			}
+			.cat-center {
+				flex: 1;
+				text-align: center;
+			}
+			.cat-name {
+				font-size: 26px;
+				font-weight: 700;
+				color: var(--primary);
+				line-height: 1.2;
+			}
+			.cat-range {
+				font-size: 12px;
+				color: var(--muted);
+				margin-top: 2px;
+			}
+
+			.song-list {
+				flex: 1;
+				overflow-y: auto;
+				margin-top: 10px;
+				display: flex;
+				flex-direction: column;
+				gap: 3px;
+				padding-bottom: 4px;
+			}
+			.song-item {
+				padding: 10px 14px;
+				border-radius: 8px;
+				background: var(--surface);
+				font-size: 17px;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				border: 2px solid transparent;
+				cursor: pointer;
+				transition:
+					background 0.12s,
+					border-color 0.12s;
+			}
+			.song-item:active {
+				background: #1c1c3a;
+			}
+			.song-item.selected {
+				border-color: var(--highlight);
+				background: #1c1c38;
+				color: var(--highlight);
+			}
+			.song-num {
+				font-size: 12px;
+				color: var(--muted);
+				min-width: 30px;
+				font-variant-numeric: tabular-nums;
+				flex-shrink: 0;
+			}
+			.song-item.selected .song-num {
+				color: var(--highlight);
+				opacity: 0.7;
+			}
+
+			.song-list::-webkit-scrollbar {
+				width: 3px;
+			}
+			.song-list::-webkit-scrollbar-thumb {
+				background: #33335a;
+				border-radius: 2px;
+			}
+
+			/* ── SONG VIEW ──────────────────────────────────── */
+			#song-view {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				padding: 14px 16px 0;
+				overflow: hidden;
+			}
+
+			.sv-header {
+				text-align: center;
+				flex-shrink: 0;
+			}
+			.sv-num {
+				font-size: 11px;
+				color: var(--muted);
+				letter-spacing: 3px;
+				text-transform: uppercase;
+			}
+			.sv-title {
+				font-size: 20px;
+				font-weight: 700;
+				color: var(--primary);
+				margin-top: 2px;
+				line-height: 1.3;
+			}
+			.sv-progress {
+				text-align: center;
+				font-size: 12px;
+				color: var(--muted);
+				margin-top: 6px;
+			}
+
+			.lines-area {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 10px;
+				padding: 12px 0;
+			}
+			.line-ctx {
+				font-size: 15px;
+				color: var(--muted);
+				text-align: center;
+				max-width: 88%;
+				line-height: 1.5;
+				opacity: 0.55;
+				padding: 4px 0;
+				min-height: 24px;
+			}
+			.line-cur {
+				font-size: 26px;
+				font-weight: 600;
+				color: var(--highlight);
+				text-align: center;
+				max-width: 92%;
+				line-height: 1.5;
+				padding: 16px 20px;
+				background: #181830;
+				border-radius: 12px;
+				border: 2px solid var(--highlight);
+				min-height: 80px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.line-cur.end {
+				color: var(--accent);
+				border-color: var(--accent);
+				font-size: 22px;
+			}
+
+			/* ── Controls hint ──────────────────────────────── */
+			.ctrl-bar {
+				flex-shrink: 0;
+				padding: 7px 12px;
+				background: var(--surface);
+				border-top: 1px solid var(--border);
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px 12px;
+				justify-content: center;
+			}
+			.ctrl {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				font-size: 12px;
+				color: var(--muted);
+			}
+			.btn {
+				background: #25254a;
+				color: var(--text);
+				border-radius: 4px;
+				padding: 1px 7px;
+				font-size: 11px;
+				font-weight: 700;
+				border: 1px solid #44446a;
+			}
+
+			/* ── NFC / Voice overlay ────────────────────────── */
+			#nfc-overlay,
+			#voice-overlay {
+				display: none;
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.88);
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 20px;
+				z-index: 100;
+			}
+			#nfc-overlay.on,
+			#voice-overlay.on {
+				display: flex;
+			}
+			.voice-listen {
+				font-size: 72px;
+				animation: pulse 0.8s ease-in-out infinite;
+			}
+			.nfc-icon {
+				font-size: 72px;
+				animation: pulse 1.4s ease-in-out infinite;
+			}
+			@keyframes pulse {
+				0%,
+				100% {
+					opacity: 0.7;
+					transform: scale(1);
+				}
+				50% {
+					opacity: 1;
+					transform: scale(1.08);
+				}
+			}
+			.nfc-msg {
+				font-size: 22px;
+				color: var(--text);
+				text-align: center;
+				max-width: 280px;
+				line-height: 1.4;
+			}
+			.nfc-sub {
+				font-size: 14px;
+				color: var(--muted);
+			}
+
+			/* ── Toast ──────────────────────────────────────── */
+			#toast {
+				position: fixed;
+				bottom: 70px;
+				left: 50%;
+				transform: translateX(-50%);
+				background: #2a2a50;
+				color: var(--text);
+				padding: 10px 20px;
+				border-radius: 8px;
+				font-size: 15px;
+				max-width: 85vw;
+				text-align: center;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.3s;
+				z-index: 200;
+			}
+			#toast.show {
+				opacity: 1;
+			}
+
+			/* ── Utility ────────────────────────────────────── */
+			.hidden {
+				display: none !important;
+			}
+
+			/* ARIA live region (visually hidden) */
+			#aria-live {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				overflow: hidden;
+				clip: rect(0, 0, 0, 0);
+			}
+		</style>
+	</head>
+	<body>
+		<div id="aria-live" aria-live="assertive" aria-atomic="true"></div>
+
+		<!-- Status bar -->
+		<div id="status-bar">
+			<span>Cancionero SJJ</span>
+			<span id="gp-status" class="off">⊙ Sin mando</span>
+		</div>
+
+		<div id="main">
+			<!-- ── MENU VIEW ── -->
+			<div id="menu-view">
+				<div class="cat-nav">
+					<span class="cat-arrow">◀</span>
+					<div class="cat-center">
+						<div class="cat-name" id="cat-name">…</div>
+						<div class="cat-range" id="cat-range"></div>
+					</div>
+					<span class="cat-arrow">▶</span>
+				</div>
+				<div class="song-list" id="song-list"></div>
+			</div>
+
+			<!-- ── SONG VIEW ── -->
+			<div id="song-view" class="hidden">
+				<div class="sv-header">
+					<div class="sv-num" id="sv-num"></div>
+					<div class="sv-title" id="sv-title"></div>
+				</div>
+				<div class="sv-progress" id="sv-progress"></div>
+				<div class="lines-area">
+					<div class="line-ctx" id="sv-prev"></div>
+					<div class="line-cur" id="sv-cur">…</div>
+					<div class="line-ctx" id="sv-next"></div>
+				</div>
+			</div>
+		</div>
+		<!-- #main -->
+
+		<!-- Controls hint (menu) -->
+		<div id="ctrl-menu" class="ctrl-bar">
+			<div class="ctrl"><span class="btn">L1/R1</span> Categoría</div>
+			<div class="ctrl"><span class="btn">↑↓</span> Canción</div>
+			<div class="ctrl"><span class="btn">A</span> Abrir</div>
+			<div class="ctrl"><span class="btn">Y</span> Buscar por voz</div>
+		</div>
+
+		<!-- Controls hint (song) -->
+		<div id="ctrl-song" class="ctrl-bar hidden">
+			<div class="ctrl"><span class="btn">L1/R1</span> Línea ant./sig.</div>
+			<div class="ctrl"><span class="btn">X</span> Volver</div>
+			<div class="ctrl"><span class="btn">Y</span> Guardar NFC</div>
+		</div>
+
+		<!-- NFC overlay -->
+		<div id="nfc-overlay">
+			<div class="nfc-icon">📡</div>
+			<div class="nfc-msg" id="nfc-msg">Acerque la etiqueta NFC</div>
+			<div class="nfc-sub" id="nfc-sub">Presione X para cancelar</div>
+		</div>
+
+		<!-- Voice overlay -->
+		<div id="voice-overlay">
+			<div class="voice-listen">🎤</div>
+			<div class="nfc-msg" id="voice-msg">Escuchando…</div>
+			<div class="nfc-sub">Diga el número o título de la canción</div>
+		</div>
+
+		<!-- Toast -->
+		<div id="toast"></div>
+
+		<script>
+			/* =============================================================
+   AUDIO — earcons
+============================================================= */
+			const SND = {};
+			["click", "enter", "back"].forEach((n) => {
+				const a = new Audio(`sounds/${n}.mp3`);
+				a.preload = "auto";
+				SND[n] = a;
+			});
+			function snd(name) {
+				try {
+					const a = SND[name];
+					if (a) {
+						a.currentTime = 0;
+						a.play().catch(() => {});
+					}
+				} catch (e) {}
+			}
+
+			/* =============================================================
+   HAPTICS
+============================================================= */
+			function vib(pat) {
+				if (navigator.vibrate) navigator.vibrate(pat);
+			}
+			const V = {
+				nav: [30],
+				enter: [60, 30, 60],
+				back: [80],
+				err: [100, 50, 100, 50, 100],
+				nfc: [40, 30, 40],
+				end: [60, 40, 60, 40, 120]
+			};
+
+			/* =============================================================
+   TTS
+============================================================= */
+			let ttsQ = [];
+			let ttsBusy = false;
+			let preferredVoice = null;
+
+			// Priority order for Latin American Spanish voices
+			const LATIN_LANGS = ["es-MX", "es-US", "es-419"];
+
+			function _pickVoice() {
+				const voices = speechSynthesis.getVoices();
+				if (!voices.length) return;
+				for (const code of LATIN_LANGS) {
+					const v = voices.find(
+						(v) => v.lang.toLowerCase() === code.toLowerCase()
+					);
+					if (v) {
+						preferredVoice = v;
+						return;
+					}
+				}
+				// Any Spanish voice that is NOT Castilian es-ES
+				const v = voices.find(
+					(v) => v.lang.startsWith("es") && v.lang !== "es-ES"
+				);
+				if (v) {
+					preferredVoice = v;
+					return;
+				}
+				// Last resort: keep null (will use es-419 tag and let browser decide)
+			}
+			speechSynthesis.onvoiceschanged = _pickVoice;
+			_pickVoice();
+
+			function speak(text, now = false) {
+				if (now) {
+					speechSynthesis.cancel();
+					ttsQ = [];
+					ttsBusy = false;
+				}
+				ttsQ.push(text);
+				if (!ttsBusy) _ttsNext();
+			}
+			function _ttsNext() {
+				if (!ttsQ.length) {
+					ttsBusy = false;
+					return;
+				}
+				ttsBusy = true;
+				const u = new SpeechSynthesisUtterance(ttsQ.shift());
+				if (preferredVoice) {
+					u.voice = preferredVoice;
+					u.lang = preferredVoice.lang;
+				} else {
+					u.lang = "es-419";
+				}
+				u.rate = 1.05;
+				u.onend = u.onerror = _ttsNext;
+				speechSynthesis.speak(u);
+			}
+			function ariaAnn(t) {
+				const el = document.getElementById("aria-live");
+				el.textContent = "";
+				setTimeout(() => {
+					el.textContent = t;
+				}, 40);
+			}
+
+			/* =============================================================
+   STATE
+============================================================= */
+			const S = {
+				mode: "MENU", // 'MENU' | 'SONG'
+				cats: [],
+				songs: [],
+				catIdx: 0,
+				songIdxInCat: 0,
+				lines: [],
+				lineIdx: 0,
+				atEnd: false,
+				songNum: null,
+				nfcBusy: false
+			};
+
+			const BASE_URL = (() => {
+				const h = window.location.href.replace(/[?#].*$/, "");
+				return h.endsWith("/") ? h : h.replace(/\/[^/]*$/, "/");
+			})();
+
+			/* =============================================================
+   DATA
+============================================================= */
+			async function loadData() {
+				const [cr, sr] = await Promise.all([
+					fetch("data/categories.json"),
+					fetch("data/songs.json")
+				]);
+				S.cats = await cr.json();
+				S.songs = await sr.json();
+			}
+
+			function songsInCat(ci) {
+				const c = S.cats[ci];
+				return S.songs.filter((s) => s.song >= c.from && s.song <= c.to);
+			}
+
+			async function loadLines(num) {
+				const pad = String(num).padStart(3, "0");
+				try {
+					const r = await fetch(`data/${pad}.txt`);
+					if (!r.ok) throw 0;
+					const txt = await r.text();
+					const all = txt
+						.split("\n")
+						.map((l) => l.trim())
+						.filter(Boolean);
+					// First line is header (title + reference) — skip it
+					return all.length > 1 ? all.slice(1) : all;
+				} catch {
+					return ["Letra no disponible para esta canción."];
+				}
+			}
+
+			/* =============================================================
+   RENDER
+============================================================= */
+			function renderMenu() {
+				const cat = S.cats[S.catIdx];
+				const songs = songsInCat(S.catIdx);
+				document.getElementById("cat-name").textContent = cat.category;
+				document.getElementById("cat-range").textContent =
+					`Canciones ${cat.from}–${Math.min(cat.to, 162)}  (${songs.length})`;
+
+				const list = document.getElementById("song-list");
+				list.innerHTML = "";
+				songs.forEach((s, i) => {
+					const d = document.createElement("div");
+					d.className = "song-item" + (i === S.songIdxInCat ? " selected" : "");
+					d.innerHTML = `<span class="song-num">${String(s.song).padStart(3, "0")}</span>${s.title}`;
+					d.addEventListener("click", () => {
+						S.songIdxInCat = i;
+						renderMenu();
+						openSong(s.song);
+					});
+					list.appendChild(d);
+				});
+
+				const sel = list.querySelector(".selected");
+				if (sel) sel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+			}
+
+			function renderSong() {
+				const L = S.lines,
+					i = S.lineIdx;
+				const cur = document.getElementById("sv-cur");
+				const prev = document.getElementById("sv-prev");
+				const next = document.getElementById("sv-next");
+				const prog = document.getElementById("sv-progress");
+
+				if (S.atEnd) {
+					cur.textContent = "♪ FIN DE LA CANCIÓN ♪";
+					cur.className = "line-cur end";
+					prev.textContent = L[L.length - 1] || "";
+					next.textContent = "";
+					prog.textContent = `Fin · ${L.length} líneas`;
+				} else {
+					cur.textContent = L[i] || "";
+					cur.className = "line-cur";
+					prev.textContent = i > 0 ? L[i - 1] : "";
+					next.textContent = i < L.length - 1 ? L[i + 1] : "";
+					prog.textContent = `Línea ${i + 1} de ${L.length}`;
+				}
+			}
+
+			/* =============================================================
+   VIEW SWITCHING
+============================================================= */
+			function showMenu() {
+				S.mode = "MENU";
+				document.getElementById("menu-view").classList.remove("hidden");
+				document.getElementById("song-view").classList.add("hidden");
+				document.getElementById("ctrl-menu").classList.remove("hidden");
+				document.getElementById("ctrl-song").classList.add("hidden");
+			}
+			function showSong() {
+				S.mode = "SONG";
+				document.getElementById("menu-view").classList.add("hidden");
+				document.getElementById("song-view").classList.remove("hidden");
+				document.getElementById("ctrl-menu").classList.add("hidden");
+				document.getElementById("ctrl-song").classList.remove("hidden");
+			}
+
+			/* =============================================================
+   ACTIONS
+============================================================= */
+			async function openSong(num) {
+				const song = S.songs.find((s) => s.song === num);
+				if (!song) return;
+
+				snd("enter");
+				vib(V.enter);
+
+				S.songNum = num;
+				S.lineIdx = 0;
+				S.atEnd = false;
+				S.lines = await loadLines(num);
+
+				const pad = String(num).padStart(3, "0");
+				document.getElementById("sv-num").textContent = `CANCIÓN ${pad}`;
+				document.getElementById("sv-title").textContent = song.title;
+
+				// Update URL with ?c= param (no path change needed)
+				const url = `${BASE_URL}index.html?c=${pad}`;
+				try {
+					history.replaceState({ num }, "", `?c=${pad}`);
+				} catch (e) {}
+
+				showSong();
+				renderSong();
+
+				// Announce title then auto-read first line
+				const title = `Canción ${num}. ${song.title}.`;
+				speak(title, true);
+				ariaAnn(title);
+				if (S.lines.length) {
+					speak(S.lines[0]); // queued after title
+					ariaAnn(S.lines[0]);
+				}
+			}
+
+			function backToMenu() {
+				snd("back");
+				vib(V.back);
+				speak("Menú principal.", true);
+				showMenu();
+				renderMenu();
+				try {
+					history.replaceState({}, "", BASE_URL);
+				} catch (e) {}
+			}
+
+			/* ── Menu navigation ── */
+			function catPrev() {
+				snd("click");
+				vib(V.nav);
+				S.catIdx = (S.catIdx - 1 + S.cats.length) % S.cats.length;
+				S.songIdxInCat = 0;
+				renderMenu();
+				const c = S.cats[S.catIdx],
+					ss = songsInCat(S.catIdx);
+				const first = ss[0];
+				const msg = first
+					? `${c.category}. Canción ${first.song}. ${first.title}`
+					: c.category;
+				speak(msg, true);
+				ariaAnn(msg);
+			}
+			function catNext() {
+				snd("click");
+				vib(V.nav);
+				S.catIdx = (S.catIdx + 1) % S.cats.length;
+				S.songIdxInCat = 0;
+				renderMenu();
+				const c = S.cats[S.catIdx],
+					ss = songsInCat(S.catIdx);
+				const first = ss[0];
+				const msg = first
+					? `${c.category}. Canción ${first.song}. ${first.title}`
+					: c.category;
+				speak(msg, true);
+				ariaAnn(msg);
+			}
+			function songUp() {
+				const ss = songsInCat(S.catIdx);
+				if (!ss.length) return;
+				snd("click");
+				vib(V.nav);
+				S.songIdxInCat = (S.songIdxInCat - 1 + ss.length) % ss.length;
+				renderMenu();
+				const s = ss[S.songIdxInCat];
+				const msg = `${s.song}. ${s.title}`;
+				speak(msg, true);
+				ariaAnn(msg);
+			}
+			function songDown() {
+				const ss = songsInCat(S.catIdx);
+				if (!ss.length) return;
+				snd("click");
+				vib(V.nav);
+				S.songIdxInCat = (S.songIdxInCat + 1) % ss.length;
+				renderMenu();
+				const s = ss[S.songIdxInCat];
+				const msg = `${s.song}. ${s.title}`;
+				speak(msg, true);
+				ariaAnn(msg);
+			}
+
+			/* ── Song navigation ── */
+			function linePrev() {
+				if (S.atEnd) {
+					// From "end" screen go back to last real line
+					S.atEnd = false;
+					renderSong();
+					speak(S.lines[S.lineIdx], true);
+					ariaAnn(S.lines[S.lineIdx]);
+					snd("click");
+					vib(V.nav);
+					return;
+				}
+				if (S.lineIdx > 0) {
+					snd("click");
+					vib(V.nav);
+					S.lineIdx--;
+					renderSong();
+					speak(S.lines[S.lineIdx], true);
+					ariaAnn(S.lines[S.lineIdx]);
+				} else {
+					// Already at first line — re-read
+					vib(V.err);
+					speak(S.lines[0], true);
+					ariaAnn(S.lines[0]);
+				}
+			}
+			function lineNext() {
+				if (S.atEnd) {
+					vib(V.err);
+					speak("Fin de la canción.", true);
+					ariaAnn("Fin de la canción");
+					return;
+				}
+				if (S.lineIdx < S.lines.length - 1) {
+					snd("click");
+					vib(V.nav);
+					S.lineIdx++;
+					renderSong();
+					speak(S.lines[S.lineIdx], true);
+					ariaAnn(S.lines[S.lineIdx]);
+				} else {
+					// Reached the end
+					snd("click");
+					vib(V.end);
+					S.atEnd = true;
+					renderSong();
+					speak("Fin de la canción.", true);
+					ariaAnn("Fin de la canción");
+				}
+			}
+
+			/* =============================================================
+   NFC
+============================================================= */
+			let nfcAbort = null;
+
+			async function nfcRead() {
+				if (!("NDEFReader" in window)) {
+					toast("NFC no disponible en este dispositivo");
+					vib(V.err);
+					speak("NFC no disponible.", true);
+					return;
+				}
+				try {
+					nfcAbort = new AbortController();
+					S.nfcBusy = true;
+					showNFC("read", "Acerque la etiqueta NFC al dispositivo");
+					vib(V.nfc);
+					speak("Leyendo etiqueta NFC. Acerque el dispositivo.", true);
+
+					const reader = new NDEFReader();
+					await reader.scan({ signal: nfcAbort.signal });
+
+					reader.addEventListener("reading", ({ message }) => {
+						for (const rec of message.records) {
+							const raw = new TextDecoder().decode(rec.data);
+							const m = raw.match(/[?&]c=0*(\d+)/);
+							if (m) {
+								const num = parseInt(m[1], 10);
+								cancelNFC();
+								vib([50, 30, 50, 30, 80]);
+								navigateToSong(num);
+								return;
+							}
+						}
+						toast("Etiqueta no reconocida");
+						vib(V.err);
+						speak("Etiqueta no reconocida.", true);
+						cancelNFC();
+					});
+					reader.addEventListener("readingerror", () => {
+						toast("Error leyendo etiqueta");
+						vib(V.err);
+						speak("Error al leer la etiqueta.", true);
+						cancelNFC();
+					});
+				} catch (e) {
+					if (e.name !== "AbortError") {
+						toast("NFC: " + e.message);
+						vib(V.err);
+						speak("Error en NFC.", true);
+					}
+					cancelNFC();
+				}
+			}
+
+			async function nfcWrite() {
+				if (!("NDEFReader" in window)) {
+					toast("NFC no disponible");
+					vib(V.err);
+					speak("NFC no disponible.", true);
+					return;
+				}
+				if (!S.songNum) return;
+				const pad = String(S.songNum).padStart(3, "0");
+				const songUrl =
+					window.location.origin +
+					BASE_URL.replace(window.location.origin, "") +
+					`?c=${pad}`;
+
+				try {
+					nfcAbort = new AbortController();
+					S.nfcBusy = true;
+					showNFC(
+						"write",
+						`Acerque etiqueta para guardar la Canción ${S.songNum}`
+					);
+					vib(V.nfc);
+					speak(
+						`Guardando canción ${S.songNum} en etiqueta NFC. Acerque la etiqueta.`,
+						true
+					);
+
+					const writer = new NDEFReader();
+					await writer.write(
+						{ records: [{ recordType: "url", data: songUrl }] },
+						{ signal: nfcAbort.signal }
+					);
+					cancelNFC();
+					vib([50, 30, 80]);
+					toast("Guardado en etiqueta NFC ✓");
+					speak("Canción guardada en etiqueta NFC.", true);
+				} catch (e) {
+					if (e.name !== "AbortError") {
+						toast("Error al escribir NFC");
+						vib(V.err);
+						speak("Error al escribir la etiqueta.", true);
+					}
+					cancelNFC();
+				}
+			}
+
+			function cancelNFC() {
+				if (nfcAbort) {
+					nfcAbort.abort();
+					nfcAbort = null;
+				}
+				S.nfcBusy = false;
+				document.getElementById("nfc-overlay").classList.remove("on");
+			}
+
+			function showNFC(mode, msg) {
+				document.getElementById("nfc-msg").textContent = msg;
+				document.getElementById("nfc-sub").textContent =
+					mode === "write"
+						? "Acerque para grabar · X para cancelar"
+						: "Presione X para cancelar";
+				document.getElementById("nfc-overlay").classList.add("on");
+			}
+
+			function navigateToSong(num) {
+				const ci = S.cats.findIndex((c) => num >= c.from && num <= c.to);
+				if (ci === -1) {
+					speak("Canción no encontrada.", true);
+					return;
+				}
+				S.catIdx = ci;
+				const ss = songsInCat(ci);
+				const si = ss.findIndex((s) => s.song === num);
+				S.songIdxInCat = Math.max(0, si);
+				showMenu();
+				renderMenu();
+				openSong(num);
+			}
+
+			/* =============================================================
+   VOICE SEARCH
+============================================================= */
+			// Spanish number word table (1–162, normalized without accents)
+			const _UNITS = {
+				cero: 0,
+				uno: 1,
+				una: 1,
+				dos: 2,
+				tres: 3,
+				cuatro: 4,
+				cinco: 5,
+				seis: 6,
+				siete: 7,
+				ocho: 8,
+				nueve: 9,
+				diez: 10,
+				once: 11,
+				doce: 12,
+				trece: 13,
+				catorce: 14,
+				quince: 15,
+				dieciseis: 16,
+				diecisiete: 17,
+				dieciocho: 18,
+				diecinueve: 19
+			};
+			const _TENS = {
+				veinte: 20,
+				treinta: 30,
+				cuarenta: 40,
+				cincuenta: 50,
+				sesenta: 60,
+				setenta: 70,
+				ochenta: 80,
+				noventa: 90
+			};
+			const _TWENTIES = {
+				veintiuno: 21,
+				veintidos: 22,
+				veintitres: 23,
+				veinticuatro: 24,
+				veinticinco: 25,
+				veintiseis: 26,
+				veintisiete: 27,
+				veintiocho: 28,
+				veintinueve: 29
+			};
+
+			function _norm(t) {
+				// Lowercase + strip accents
+				return t
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+			}
+
+			function _parseNum(raw) {
+				const t = _norm(raw).trim();
+
+				// Pure digits
+				const dm = t.match(/^(\d{1,3})$/);
+				if (dm) return parseInt(dm[1], 10);
+
+				if (_UNITS[t] !== undefined) return _UNITS[t];
+				if (_TENS[t] !== undefined) return _TENS[t];
+				if (_TWENTIES[t] !== undefined) return _TWENTIES[t];
+
+				// "cien" / "ciento [...]"
+				const cm = t.match(/^cien(?:to)?\s*(.*)/);
+				if (cm) {
+					const rest = cm[1].replace(/^y\s*/, "").trim();
+					if (!rest) return 100;
+					const r = _parseNum(rest);
+					if (!isNaN(r)) return 100 + r;
+				}
+
+				// "tens y units"  e.g. "treinta y dos"
+				const pm = t.match(/^(\w+)\s+y\s+(\w+)$/);
+				if (pm) {
+					const ten = _TENS[pm[1]];
+					const unit = _UNITS[pm[2]];
+					if (ten !== undefined && unit !== undefined) return ten + unit;
+				}
+
+				// "ciento tens y units"  e.g. "ciento treinta y dos"
+				const lm = t.match(/^cien(?:to)?\s+(\w+)(?:\s+y\s+(\w+))?$/);
+				if (lm) {
+					const ten = _TENS[lm[1]] || 0;
+					const unit = lm[2] ? _UNITS[lm[2]] || 0 : 0;
+					if (_TENS[lm[1]] !== undefined) return 100 + ten + unit;
+				}
+
+				return NaN;
+			}
+
+			function _parseSongCommand(transcript) {
+				const t = _norm(transcript);
+
+				// Strip command prefixes
+				const cleaned = t
+					.replace(/\bcancion\b/g, "")
+					.replace(/\bnumero\b/g, "")
+					.replace(/\bel\b|\bla\b|\blas\b|\blos\b/g, "")
+					.replace(/\babrir\b|\bir\s+a\b|\bpon\b|\bponer\b/g, "")
+					.trim();
+
+				// Try as number
+				const num = _parseNum(cleaned);
+				if (!isNaN(num) && num >= 1 && num <= 162) return { type: "num", num };
+
+				// Also try extracting a digit string anywhere in the original transcript
+				const digitM = t.match(/\b(\d{1,3})\b/);
+				if (digitM) {
+					const n = parseInt(digitM[1], 10);
+					if (n >= 1 && n <= 162) return { type: "num", num: n };
+				}
+
+				// Try title match (fuzzy word overlap)
+				const q = t.replace(/[^\w\s]/g, "");
+				const qWords = q.split(/\s+/).filter((w) => w.length > 2);
+				if (qWords.length) {
+					let best = null,
+						bestScore = 0;
+					for (const s of S.songs) {
+						const titleNorm = _norm(s.title).replace(/[^\w\s]/g, "");
+						const tWords = titleNorm.split(/\s+/);
+						let hits = 0;
+						for (const w of qWords) {
+							if (tWords.some((tw) => tw.includes(w) || w.includes(tw))) hits++;
+						}
+						const score = hits / qWords.length;
+						if (score > bestScore && score >= 0.5) {
+							bestScore = score;
+							best = s;
+						}
+					}
+					if (best) return { type: "song", song: best };
+				}
+
+				return null;
+			}
+
+			let _voiceRecog = null;
+
+			function startVoiceSearch() {
+				const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+				if (!SR) {
+					toast("Reconocimiento de voz no disponible en este navegador");
+					speak("Reconocimiento de voz no disponible.", true);
+					return;
+				}
+				if (_voiceRecog) {
+					_voiceRecog.abort();
+					_voiceRecog = null;
+				}
+
+				_voiceRecog = new SR();
+				_voiceRecog.lang = "es-419";
+				_voiceRecog.interimResults = false;
+				_voiceRecog.maxAlternatives = 5;
+
+				document.getElementById("voice-overlay").classList.add("on");
+				speak("Diga el número o el título de la canción.", true);
+				vib(V.nfc);
+
+				_voiceRecog.onresult = (event) => {
+					_hideVoiceOverlay();
+					let found = null;
+					for (let i = 0; i < event.results[0].length; i++) {
+						const transcript = event.results[0][i].transcript;
+						found = _parseSongCommand(transcript);
+						if (found) break;
+					}
+					if (found) {
+						const num = found.type === "num" ? found.num : found.song.song;
+						navigateToSong(num);
+					} else {
+						vib(V.err);
+						speak("No se encontró la canción. Intente de nuevo.", true);
+						toast("No se reconoció. Intente de nuevo.");
+					}
+					_voiceRecog = null;
+				};
+				_voiceRecog.onerror = (event) => {
+					_hideVoiceOverlay();
+					if (event.error !== "aborted") {
+						vib(V.err);
+						speak("Error en reconocimiento de voz.", true);
+						toast("Error de voz: " + event.error);
+					}
+					_voiceRecog = null;
+				};
+				_voiceRecog.onend = () => {
+					_hideVoiceOverlay();
+					_voiceRecog = null;
+				};
+
+				_voiceRecog.start();
+			}
+
+			function cancelVoiceSearch() {
+				if (_voiceRecog) {
+					_voiceRecog.abort();
+					_voiceRecog = null;
+				}
+				_hideVoiceOverlay();
+			}
+			function _hideVoiceOverlay() {
+				document.getElementById("voice-overlay").classList.remove("on");
+			}
+
+			/* =============================================================
+   GAMEPAD
+============================================================= */
+			const prevBtns = {};
+
+			function isJustPressed(gpIdx, btnIdx, pressed) {
+				const key = `${gpIdx}_${btnIdx}`;
+				const was = prevBtns[key] || false;
+				const just = pressed && !was;
+				prevBtns[key] = pressed;
+				return just;
+			}
+
+			function onButton(b) {
+				// NFC active: only X (2) cancels
+				if (S.nfcBusy) {
+					if (b === 2) cancelNFC();
+					return;
+				}
+				// Voice search active: only X (2) cancels
+				if (_voiceRecog) {
+					if (b === 2) cancelVoiceSearch();
+					return;
+				}
+
+				if (S.mode === "MENU") {
+					if (b === 0) {
+						const ss = songsInCat(S.catIdx);
+						if (ss[S.songIdxInCat]) openSong(ss[S.songIdxInCat].song);
+					} else if (b === 4) catPrev();
+					else if (b === 5) catNext();
+					else if (b === 12) songUp();
+					else if (b === 13) songDown();
+					else if (b === 3) startVoiceSearch(); // Y → búsqueda por voz
+				} else if (S.mode === "SONG") {
+					if (b === 2) backToMenu();
+					else if (b === 4) linePrev();
+					else if (b === 5) lineNext();
+					else if (b === 3) nfcWrite();
+				}
+			}
+
+			function gpLoop() {
+				const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+				for (const gp of pads) {
+					if (!gp) continue;
+					gp.buttons.forEach((btn, i) => {
+						if (isJustPressed(gp.index, i, btn.pressed)) onButton(i);
+					});
+				}
+				requestAnimationFrame(gpLoop);
+			}
+
+			window.addEventListener("gamepadconnected", (e) => {
+				document.getElementById("gp-status").textContent =
+					`⊙ ${e.gamepad.id.slice(0, 22)}`;
+				document.getElementById("gp-status").className = "gp-status";
+				vib([30, 20, 30]);
+				speak("Mando conectado.", true);
+			});
+			window.addEventListener("gamepaddisconnected", () => {
+				document.getElementById("gp-status").textContent = "⊙ Sin mando";
+				document.getElementById("gp-status").className = "off";
+				speak("Mando desconectado.", true);
+			});
+
+			// Detect already-connected gamepads (not all browsers fire the event)
+			function checkInitialGamepad() {
+				const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+				for (const gp of pads) {
+					if (gp) {
+						document.getElementById("gp-status").textContent =
+							`⊙ ${gp.id.slice(0, 22)}`;
+						document.getElementById("gp-status").className = "gp-status";
+						break;
+					}
+				}
+			}
+
+			/* =============================================================
+   TOAST
+============================================================= */
+			let toastTmr = null;
+			function toast(msg, dur = 3500) {
+				const el = document.getElementById("toast");
+				el.textContent = msg;
+				el.classList.add("show");
+				if (toastTmr) clearTimeout(toastTmr);
+				toastTmr = setTimeout(() => el.classList.remove("show"), dur);
+			}
+
+			/* =============================================================
+   PWA — Service Worker
+============================================================= */
+			if ("serviceWorker" in navigator) {
+				window.addEventListener("load", () =>
+					navigator.serviceWorker
+						.register("sw.js")
+						.catch((e) => console.warn("SW:", e))
+				);
+			}
+
+			/* =============================================================
+   INIT
+============================================================= */
+			async function init() {
+				try {
+					await loadData();
+				} catch (e) {
+					document.getElementById("main").innerHTML =
+						'<p style="color:var(--accent);padding:24px;font-size:18px">Error cargando datos.<br>Verifique la conexión a internet.</p>';
+					return;
+				}
+
+				checkInitialGamepad();
+				gpLoop();
+
+				// Check for direct song URL param
+				const params = new URLSearchParams(window.location.search);
+				const cParam = params.get("c");
+				const directN = cParam ? parseInt(cParam, 10) : NaN;
+
+				if (!isNaN(directN) && directN >= 1 && directN <= 162) {
+					navigateToSong(directN);
+				} else {
+					showMenu();
+					renderMenu();
+					const c = S.cats[0];
+					const ss = songsInCat(0);
+					const first = ss[0];
+					speak("Cantemos con gozo a Jehová.", true);
+					if (first) {
+						const catMsg = `${c.category}. Canción ${first.song}. ${first.title}.`;
+						speak(catMsg);
+						ariaAnn("Cantemos con gozo a Jehová. " + catMsg);
+					}
+				}
+			}
+
+			init();
+		</script>
+	</body>
+</html>
