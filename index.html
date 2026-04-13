@@ -339,21 +339,33 @@
 			#audio-prompt {
 				display: none;
 				position: fixed;
-				bottom: 0;
-				left: 0;
-				right: 0;
-				background: #1a1a38;
-				border-top: 2px solid var(--primary);
-				color: var(--primary);
-				text-align: center;
-				padding: 14px 16px;
-				font-size: 16px;
-				font-weight: 600;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.92);
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 16px;
 				z-index: 300;
+				cursor: pointer;
 				animation: apulse 1s ease-in-out infinite;
 			}
 			#audio-prompt.on {
-				display: block;
+				display: flex;
+			}
+			#audio-prompt .ap-icon {
+				font-size: 64px;
+			}
+			#audio-prompt .ap-msg {
+				font-size: 22px;
+				font-weight: 700;
+				color: var(--primary);
+				text-align: center;
+				max-width: 280px;
+				line-height: 1.4;
+			}
+			#audio-prompt .ap-sub {
+				font-size: 14px;
+				color: var(--muted);
 			}
 			@keyframes apulse {
 				0%, 100% { opacity: 0.7; }
@@ -363,6 +375,15 @@
 			/* ── Utility ────────────────────────────────────── */
 			.hidden {
 				display: none !important;
+			}
+
+			/* ── Audio-locked: ocultar UI hasta que se desbloquee el audio ── */
+			body.audio-locked #status-bar,
+			body.audio-locked #main,
+			body.audio-locked #ctrl-menu,
+			body.audio-locked #ctrl-song {
+				visibility: hidden;
+				pointer-events: none;
 			}
 
 			/* ARIA live region (visually hidden) */
@@ -447,7 +468,11 @@
 		<div id="toast"></div>
 
 		<!-- Audio-unlock prompt (visible solo cuando TTS está en espera de gesto) -->
-		<div id="audio-prompt">🔊 Toca la pantalla para activar el audio</div>
+		<div id="audio-prompt">
+			<div class="ap-icon">🔊</div>
+			<div class="ap-msg">Toca la pantalla para activar el audio</div>
+			<div class="ap-sub">La canción está lista para reproducirse</div>
+		</div>
 
 		<script>
 			/* =============================================================
@@ -491,6 +516,7 @@
 			let ttsBusy = false;
 			let preferredVoice = null;
 			let _audioUnlocked = false;
+			let _unlockTs = 0; // timestamp del desbloqueo, para swallowear ghost clicks
 
 			// Priority order for Latin American Spanish voices
 			const LATIN_LANGS = ["es-MX", "es-US", "es-419"];
@@ -540,6 +566,7 @@
 					// Señal háptica y visual para que el usuario toque la pantalla
 					_startHapticPulse();
 					document.getElementById('audio-prompt').classList.add('on');
+					document.body.classList.add('audio-locked');
 					return;
 				}
 				ttsBusy = true;
@@ -583,18 +610,59 @@
 			function _unlockAudio() {
 				if (_audioUnlocked) return;
 				_audioUnlocked = true;
+				_unlockTs = Date.now();
 				_stopHapticPulse();
-				document.getElementById('audio-prompt').classList.remove('on');
-				// Si hay discurso pendiente en la cola, iniciarlo ahora
-				if (ttsBusy) {
-					// Un utterance puede haber fallado silenciosamente; reiniciar
-					speechSynthesis.cancel();
-					ttsBusy = false;
-				}
-				if (ttsQ.length) _ttsNext();
+				const prompt = document.getElementById('audio-prompt');
+				prompt.classList.remove('on');
+				document.body.classList.remove('audio-locked');
+				// Restaurar contenido original por si fue modificado al conectar el mando
+				prompt.querySelector('.ap-icon').textContent = '🔊';
+				prompt.querySelector('.ap-msg').textContent = 'Toca la pantalla para activar el audio';
+				prompt.querySelector('.ap-sub').textContent = 'La canción está lista para reproducirse';
+				// Limpiar cola pendiente; el llamador es responsable de hablar el mensaje
+				speechSynthesis.cancel();
+				ttsQ = [];
+				ttsBusy = false;
 			}
+
+			// Devuelve el texto del título de la vista actual (sin hablar)
+			function _currentTitleText() {
+				if (S.mode === 'SONG' && S.songNum) {
+					const song = S.songs.find(function(s) { return s.song === S.songNum; });
+					if (song) return 'Canción ' + S.songNum + '. ' + song.title + '.';
+				}
+				const c = S.cats[S.catIdx];
+				const ss = songsInCat(S.catIdx);
+				const sel = ss[S.songIdxInCat];
+				if (c && sel) return c.category + '. Canción ' + sel.song + '. ' + sel.title + '.';
+				return 'Menú principal.';
+			}
+
 			['touchstart', 'click', 'keydown'].forEach(function (ev) {
-				document.addEventListener(ev, _unlockAudio, { once: true, capture: true });
+				document.addEventListener(ev, function _unlockGesture(e) {
+					if (document.getElementById('audio-prompt').classList.contains('on')) {
+						// Evitar que el gesto traspase el banner hacia elementos de fondo
+						e.stopPropagation();
+						_unlockAudio();
+						snd('enter');
+						// Mensaje de confirmación primero, luego el título en cola
+						speak('Pantalla activada.', true);
+						speak(_currentTitleText());
+					} else {
+						_unlockAudio();
+					}
+				}, { once: true, capture: true });
+			});
+
+			// Swallowear ghost clicks/touchstart que el navegador sintetiza
+			// justo después de que el banner desaparece (600 ms de ventana).
+			['click', 'touchstart'].forEach(function(ev) {
+				document.addEventListener(ev, function _ghostGuard(e) {
+					if (_unlockTs && Date.now() - _unlockTs < 600) {
+						e.stopPropagation();
+						e.preventDefault();
+					}
+				}, { capture: true, passive: false });
 			});
 
 			function ariaAnn(t) {
@@ -1255,6 +1323,8 @@
 			}
 
 			function onButton(b) {
+				// Ignorar input hasta que el audio esté desbloqueado
+				if (!_audioUnlocked) return;
 				// NFC active: only X (2) cancels
 				if (S.nfcBusy) {
 					if (b === 2) cancelNFC();
@@ -1322,11 +1392,20 @@
 			});
 
 			window.addEventListener("gamepadconnected", (e) => {
-				document.getElementById("gp-status").textContent =
-					`⊙ ${e.gamepad.id.slice(0, 22)}`;
+				document.getElementById("gp-status").textContent = "⊙ Mando conectado";
 				document.getElementById("gp-status").className = "gp-status";
 				vib([30, 20, 30]);
+				// Si el banner está visible, actualizarlo antes de ocultarlo
+				const prompt = document.getElementById('audio-prompt');
+				if (prompt.classList.contains('on')) {
+					prompt.querySelector('.ap-icon').textContent = '🎮';
+					prompt.querySelector('.ap-msg').textContent = 'Mando conectado';
+					prompt.querySelector('.ap-sub').textContent = '';
+				}
+				// Desbloquear primero; luego hablar (el audio ya está disponible)
+				_unlockAudio();
 				speak("Mando conectado.", true);
+				speak(_currentTitleText());
 				// Marcar el estado actual del mando para que el botón que lo
 				// conectó no dispare ninguna acción en el siguiente frame del loop.
 				seedGamepad(e.gamepad);
