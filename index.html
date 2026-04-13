@@ -335,6 +335,31 @@
 				opacity: 1;
 			}
 
+			/* ── Audio-unlock prompt ────────────────────────── */
+			#audio-prompt {
+				display: none;
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				background: #1a1a38;
+				border-top: 2px solid var(--primary);
+				color: var(--primary);
+				text-align: center;
+				padding: 14px 16px;
+				font-size: 16px;
+				font-weight: 600;
+				z-index: 300;
+				animation: apulse 1s ease-in-out infinite;
+			}
+			#audio-prompt.on {
+				display: block;
+			}
+			@keyframes apulse {
+				0%, 100% { opacity: 0.7; }
+				50%       { opacity: 1;   }
+			}
+
 			/* ── Utility ────────────────────────────────────── */
 			.hidden {
 				display: none !important;
@@ -421,6 +446,9 @@
 		<!-- Toast -->
 		<div id="toast"></div>
 
+		<!-- Audio-unlock prompt (visible solo cuando TTS está en espera de gesto) -->
+		<div id="audio-prompt">🔊 Toca la pantalla para activar el audio</div>
+
 		<script>
 			/* =============================================================
    AUDIO — earcons
@@ -462,6 +490,7 @@
 			let ttsQ = [];
 			let ttsBusy = false;
 			let preferredVoice = null;
+			let _audioUnlocked = false;
 
 			// Priority order for Latin American Spanish voices
 			const LATIN_LANGS = ["es-MX", "es-US", "es-419"];
@@ -505,6 +534,14 @@
 					ttsBusy = false;
 					return;
 				}
+				// Wait until the browser has a user gesture that unlocks audio
+				if (!_audioUnlocked) {
+					ttsBusy = false;
+					// Señal háptica y visual para que el usuario toque la pantalla
+					_startHapticPulse();
+					document.getElementById('audio-prompt').classList.add('on');
+					return;
+				}
 				ttsBusy = true;
 				const u = new SpeechSynthesisUtterance(ttsQ.shift());
 				if (preferredVoice) {
@@ -517,6 +554,49 @@
 				u.onend = u.onerror = _ttsNext;
 				speechSynthesis.speak(u);
 			}
+			// ── Latido háptico mientras se espera el gesto de desbloqueo ──
+			// Patrón: golpe corto · pausa · golpe largo · pausa larga  (lub-dub)
+			// La Vibration API puede estar bloqueada también antes del primer gesto,
+			// pero falla silenciosamente, así que intentamos de todos modos.
+			let _hapticPulseTimer = null;
+
+			function _startHapticPulse() {
+				if (_hapticPulseTimer !== null) return;
+				function _beat() {
+					if (navigator.vibrate) navigator.vibrate([55, 55, 110, 780]);
+					_hapticPulseTimer = setTimeout(_beat, 1000);
+				}
+				_beat();
+			}
+
+			function _stopHapticPulse() {
+				if (_hapticPulseTimer !== null) {
+					clearTimeout(_hapticPulseTimer);
+					_hapticPulseTimer = null;
+				}
+				if (navigator.vibrate) navigator.vibrate(0);
+			}
+
+			// Desbloquear TTS en el primer gesto del usuario (toque, clic o tecla).
+			// Necesario cuando la app se abre desde una etiqueta NFC o tras búsqueda por voz,
+			// ya que el navegador bloquea speechSynthesis sin un gesto previo.
+			function _unlockAudio() {
+				if (_audioUnlocked) return;
+				_audioUnlocked = true;
+				_stopHapticPulse();
+				document.getElementById('audio-prompt').classList.remove('on');
+				// Si hay discurso pendiente en la cola, iniciarlo ahora
+				if (ttsBusy) {
+					// Un utterance puede haber fallado silenciosamente; reiniciar
+					speechSynthesis.cancel();
+					ttsBusy = false;
+				}
+				if (ttsQ.length) _ttsNext();
+			}
+			['touchstart', 'click', 'keydown'].forEach(function (ev) {
+				document.addEventListener(ev, _unlockAudio, { once: true, capture: true });
+			});
+
 			function ariaAnn(t) {
 				const el = document.getElementById("aria-live");
 				el.textContent = "";
@@ -622,6 +702,12 @@
 					prev.textContent = L[L.length - 1] || "";
 					next.textContent = "";
 					prog.textContent = `Fin · ${L.length} líneas`;
+				} else if (i < 0) {
+					cur.textContent = "";
+					cur.className = "line-cur";
+					prev.textContent = "";
+					next.textContent = L[0] || "";
+					prog.textContent = `0 de ${L.length} líneas`;
 				} else {
 					cur.textContent = L[i] || "";
 					cur.className = "line-cur";
@@ -660,7 +746,7 @@
 				vib(V.enter);
 
 				S.songNum = num;
-				S.lineIdx = 0;
+				S.lineIdx = -1;
 				S.atEnd = false;
 				S.lines = await loadLines(num);
 
@@ -677,14 +763,10 @@
 				showSong();
 				renderSong();
 
-				// Announce title then auto-read first line
+				// Announce title only — first line is read when R1 is pressed
 				const title = `Canción ${num}. ${song.title}.`;
 				speak(title, true);
 				ariaAnn(title);
-				if (S.lines.length) {
-					speak(S.lines[0]); // queued after title
-					ariaAnn(S.lines[0]);
-				}
 			}
 
 			function backToMenu() {
@@ -1164,6 +1246,14 @@
 				return just;
 			}
 
+			// Sembrar el estado actual de un mando en prevBtns para que el botón
+			// que lo activó no dispare ninguna acción en ese mismo frame.
+			function seedGamepad(gp) {
+				gp.buttons.forEach(function (btn, i) {
+					prevBtns[gp.index + '_' + i] = btn.pressed;
+				});
+			}
+
 			function onButton(b) {
 				// NFC active: only X (2) cancels
 				if (S.nfcBusy) {
@@ -1180,6 +1270,15 @@
 					if (b === 0) {
 						const ss = songsInCat(S.catIdx);
 						if (ss[S.songIdxInCat]) openSong(ss[S.songIdxInCat].song);
+					} else if (b === 1) {
+						// B → re-leer elemento seleccionado
+						const ss = songsInCat(S.catIdx);
+						if (ss[S.songIdxInCat]) {
+							const s = ss[S.songIdxInCat];
+							const msg = `${s.song}. ${s.title}`;
+							speak(msg, true);
+							ariaAnn(msg);
+						}
 					} else if (b === 4) catPrev();
 					else if (b === 5) catNext();
 					else if (b === 12) songUp();
@@ -1187,11 +1286,19 @@
 					else if (b === 3) startVoiceSearch(); // Y → búsqueda por voz
 				} else if (S.mode === "SONG") {
 					if (b === 2) backToMenu();
-					else if (b === 4) linePrev();
+					else if (b === 1) {
+						// B → re-leer línea actual
+						if (S.lineIdx >= 0) {
+							speak(S.lines[S.lineIdx], true);
+							ariaAnn(S.lines[S.lineIdx]);
+						}
+					} else if (b === 4) linePrev();
 					else if (b === 5) lineNext();
 					else if (b === 3) nfcWrite();
 				}
 			}
+
+			let _gpRafId = null;
 
 			function gpLoop() {
 				const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -1201,8 +1308,18 @@
 						if (isJustPressed(gp.index, i, btn.pressed)) onButton(i);
 					});
 				}
-				requestAnimationFrame(gpLoop);
+				_gpRafId = requestAnimationFrame(gpLoop);
 			}
+
+			// Reiniciar el loop si requestAnimationFrame se pausó mientras el micrófono
+			// estaba activo (p.ej. la PWA pasó a segundo plano durante la búsqueda por voz).
+			document.addEventListener('visibilitychange', function () {
+				if (!document.hidden) {
+					if (_gpRafId !== null) cancelAnimationFrame(_gpRafId);
+					_gpRafId = null;
+					gpLoop();
+				}
+			});
 
 			window.addEventListener("gamepadconnected", (e) => {
 				document.getElementById("gp-status").textContent =
@@ -1210,6 +1327,9 @@
 				document.getElementById("gp-status").className = "gp-status";
 				vib([30, 20, 30]);
 				speak("Mando conectado.", true);
+				// Marcar el estado actual del mando para que el botón que lo
+				// conectó no dispare ninguna acción en el siguiente frame del loop.
+				seedGamepad(e.gamepad);
 			});
 			window.addEventListener("gamepaddisconnected", () => {
 				document.getElementById("gp-status").textContent = "⊙ Sin mando";
@@ -1225,6 +1345,8 @@
 						document.getElementById("gp-status").textContent =
 							`⊙ ${gp.id.slice(0, 22)}`;
 						document.getElementById("gp-status").className = "gp-status";
+						// Sembrar estado inicial para que ningún botón ya presionado dispare acción
+						seedGamepad(gp);
 						break;
 					}
 				}
