@@ -95,6 +95,12 @@
 				font-size: 22px;
 				color: var(--muted);
 				flex-shrink: 0;
+				cursor: pointer;
+				user-select: none;
+			}
+			.cat-arrow:hover {
+				color: var(--primary);
+				transform: scale(1.06);
 			}
 			.cat-center {
 				flex: 1;
@@ -204,6 +210,33 @@
 				justify-content: center;
 				gap: 10px;
 				padding: 12px 0;
+			}
+
+			/* ── Song view buttons (on-screen) ────────────────── */
+			.song-buttons {
+				position: fixed;
+				left: 50%;
+				transform: translateX(-50%);
+				bottom: 78px;
+				display: flex;
+				gap: 10px;
+				z-index: 160;
+			}
+			.song-btn {
+				background: linear-gradient(90deg, var(--primary), var(--highlight));
+				color: #081022;
+				padding: 10px 14px;
+				border-radius: 12px;
+				font-weight: 800;
+				font-size: 15px;
+				border: none;
+				cursor: pointer;
+				box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+				min-width: 56px;
+				text-align: center;
+			}
+			.song-btn:active {
+				transform: translateY(1px);
 			}
 			.line-ctx {
 				font-size: 15px;
@@ -335,60 +368,39 @@
 				opacity: 1;
 			}
 
-			/* ── Audio-unlock prompt ────────────────────────── */
-			#audio-prompt {
-				display: none;
+			/* ── Precache progress bar ───────────────────────── */
+			#precache-bar {
 				position: fixed;
+				left: 12px;
+				right: 12px;
+				bottom: 120px;
+				height: 18px;
+				background: rgba(255, 255, 255, 0.04);
+				border-radius: 10px;
+				overflow: hidden;
+				display: none;
+				z-index: 210;
+			}
+			#precache-inner {
+				height: 100%;
+				width: 0%;
+				background: linear-gradient(90deg, var(--primary), var(--highlight));
+				transition: width 300ms linear;
+			}
+			#precache-text {
+				position: absolute;
 				inset: 0;
-				background: rgba(0, 0, 0, 0.92);
-				flex-direction: column;
+				display: flex;
 				align-items: center;
 				justify-content: center;
-				gap: 16px;
-				z-index: 300;
-				cursor: pointer;
-				animation: apulse 1s ease-in-out infinite;
-			}
-			#audio-prompt.on {
-				display: flex;
-			}
-			#audio-prompt .ap-icon {
-				font-size: 64px;
-			}
-			#audio-prompt .ap-msg {
-				font-size: 22px;
+				font-size: 12px;
+				color: #081022;
 				font-weight: 700;
-				color: var(--primary);
-				text-align: center;
-				max-width: 280px;
-				line-height: 1.4;
-			}
-			#audio-prompt .ap-sub {
-				font-size: 14px;
-				color: var(--muted);
-			}
-			@keyframes apulse {
-				0%,
-				100% {
-					opacity: 0.7;
-				}
-				50% {
-					opacity: 1;
-				}
 			}
 
 			/* ── Utility ────────────────────────────────────── */
 			.hidden {
 				display: none !important;
-			}
-
-			/* ── Audio-locked: ocultar UI hasta que se desbloquee el audio ── */
-			body.audio-locked #status-bar,
-			body.audio-locked #main,
-			body.audio-locked #ctrl-menu,
-			body.audio-locked #ctrl-song {
-				visibility: hidden;
-				pointer-events: none;
 			}
 
 			/* ARIA live region (visually hidden) */
@@ -414,12 +426,26 @@
 			<!-- ── MENU VIEW ── -->
 			<div id="menu-view">
 				<div class="cat-nav">
-					<span class="cat-arrow">◀</span>
+					<span
+						id="cat-prev"
+						class="cat-arrow"
+						role="button"
+						tabindex="0"
+						aria-label="Categoría anterior"
+						>◀</span
+					>
 					<div class="cat-center">
 						<div class="cat-name" id="cat-name">…</div>
 						<div class="cat-range" id="cat-range"></div>
 					</div>
-					<span class="cat-arrow">▶</span>
+					<span
+						id="cat-next"
+						class="cat-arrow"
+						role="button"
+						tabindex="0"
+						aria-label="Siguiente categoría"
+						>▶</span
+					>
 				</div>
 				<div class="song-list" id="song-list"></div>
 			</div>
@@ -435,6 +461,13 @@
 					<div class="line-ctx" id="sv-prev"></div>
 					<div class="line-cur" id="sv-cur">…</div>
 					<div class="line-ctx" id="sv-next"></div>
+				</div>
+
+				<!-- On-screen buttons for song navigation -->
+				<div id="song-buttons" class="song-buttons">
+					<button id="btn-prev-line" class="song-btn">◀ Línea</button>
+					<button id="btn-back-menu" class="song-btn">✕ Menú</button>
+					<button id="btn-next-line" class="song-btn">Línea ▶</button>
 				</div>
 			</div>
 		</div>
@@ -452,7 +485,7 @@
 		<div id="ctrl-song" class="ctrl-bar hidden">
 			<div class="ctrl"><span class="btn">L1/R1</span> Línea ant./sig.</div>
 			<div class="ctrl"><span class="btn">X</span> Volver</div>
-			<div class="ctrl"><span class="btn">Y</span> Guardar NFC</div>
+			<div class="ctrl"><span class="btn">Select</span> Guardar NFC</div>
 		</div>
 
 		<!-- NFC overlay -->
@@ -472,11 +505,10 @@
 		<!-- Toast -->
 		<div id="toast"></div>
 
-		<!-- Audio-unlock prompt (visible solo cuando TTS está en espera de gesto) -->
-		<div id="audio-prompt">
-			<div class="ap-icon">🔊</div>
-			<div class="ap-msg">Toca la pantalla para activar el audio</div>
-			<div class="ap-sub">La canción está lista para reproducirse</div>
+		<!-- Precache progress bar -->
+		<div id="precache-bar" class="hidden">
+			<div id="precache-inner"></div>
+			<div id="precache-text"></div>
 		</div>
 
 		<script>
@@ -520,8 +552,6 @@
 			let ttsQ = [];
 			let ttsBusy = false;
 			let preferredVoice = null;
-			let _audioUnlocked = false;
-			let _unlockTs = 0; // timestamp del desbloqueo, para swallowear ghost clicks
 
 			// Priority order for Latin American Spanish voices
 			const LATIN_LANGS = ["es-MX", "es-US", "es-419"];
@@ -565,15 +595,6 @@
 					ttsBusy = false;
 					return;
 				}
-				// Wait until the browser has a user gesture that unlocks audio
-				if (!_audioUnlocked) {
-					ttsBusy = false;
-					// Señal háptica y visual para que el usuario toque la pantalla
-					_startHapticPulse();
-					document.getElementById("audio-prompt").classList.add("on");
-					document.body.classList.add("audio-locked");
-					return;
-				}
 				ttsBusy = true;
 				const u = new SpeechSynthesisUtterance(ttsQ.shift());
 				if (preferredVoice) {
@@ -586,61 +607,6 @@
 				u.onend = u.onerror = _ttsNext;
 				speechSynthesis.speak(u);
 			}
-			// ── Latido háptico mientras se espera el gesto de desbloqueo ──
-			// Patrón: golpe corto · pausa · golpe largo · pausa larga  (lub-dub)
-			// La Vibration API puede estar bloqueada también antes del primer gesto,
-			// pero falla silenciosamente, así que intentamos de todos modos.
-			let _hapticPulseTimer = null;
-
-			function _startHapticPulse() {
-				try {
-					if (_hapticPulseTimer !== null) return;
-					function _beat() {
-						if (navigator.vibrate) navigator.vibrate([55, 55, 110, 780]);
-						_hapticPulseTimer = setTimeout(_beat, 1000);
-					}
-					_beat();
-				} catch (e) {
-					console.error("Error al iniciar el pulso háptico:", e);
-				}
-			}
-
-			function _stopHapticPulse() {
-				try {
-					if (_hapticPulseTimer !== null) {
-						clearTimeout(_hapticPulseTimer);
-						_hapticPulseTimer = null;
-					}
-					if (navigator.vibrate) navigator.vibrate(0);
-				} catch (e) {
-					console.error("Error al detener el pulso háptico:", e);
-				}
-			}
-
-			// Desbloquear TTS en el primer gesto del usuario (toque, clic o tecla).
-			// Necesario cuando la app se abre desde una etiqueta NFC o tras búsqueda por voz,
-			// ya que el navegador bloquea speechSynthesis sin un gesto previo.
-			function _unlockAudio() {
-				if (_audioUnlocked) return;
-				_audioUnlocked = true;
-				_unlockTs = Date.now();
-				_stopHapticPulse();
-				const prompt = document.getElementById("audio-prompt");
-				prompt.classList.remove("on");
-				document.body.classList.remove("audio-locked");
-				// Restaurar contenido original por si fue modificado al conectar el mando
-				prompt.querySelector(".ap-icon").textContent = "🔊";
-				prompt.querySelector(".ap-msg").textContent =
-					"Toca la pantalla para activar el audio";
-				prompt.querySelector(".ap-sub").textContent =
-					"La canción está lista para reproducirse";
-				// Limpiar cola JS; NO llamar speechSynthesis.cancel() aquí porque
-				// speak(text, true) ya lo hace justo después, y el doble cancel()
-				// en Android Chrome hace que el siguiente speak() falle silenciosamente.
-				ttsQ = [];
-				ttsBusy = false;
-			}
-
 			// Devuelve el texto del título de la vista actual (sin hablar)
 			function _currentTitleText() {
 				if (S.mode === "SONG" && S.songNum) {
@@ -656,44 +622,6 @@
 					return c.category + ". Canción " + sel.song + ". " + sel.title + ".";
 				return "Menú principal.";
 			}
-
-			["touchstart", "click", "keydown"].forEach(function (ev) {
-				document.addEventListener(
-					ev,
-					function _unlockGesture(e) {
-						if (
-							document.getElementById("audio-prompt").classList.contains("on")
-						) {
-							// Evitar que el gesto traspase el banner hacia elementos de fondo
-							//e.stopPropagation();
-							snd("enter");
-							_unlockAudio();
-							// Mensaje de confirmación primero, luego el título en cola
-							speak("Pantalla activada.", true);
-							speak(_currentTitleText());
-							alert(1);
-						} else {
-							_unlockAudio();
-						}
-					},
-					{ once: true, capture: true }
-				);
-			});
-
-			// Swallowear ghost clicks/touchstart que el navegador sintetiza
-			// justo después de que el banner desaparece (600 ms de ventana).
-			["click", "touchstart"].forEach(function (ev) {
-				document.addEventListener(
-					ev,
-					function _ghostGuard(e) {
-						if (_unlockTs && Date.now() - _unlockTs < 600) {
-							//e.stopPropagation();
-							e.preventDefault();
-						}
-					},
-					{ capture: true, passive: false }
-				);
-			});
 
 			function ariaAnn(t) {
 				const el = document.getElementById("aria-live");
@@ -1288,10 +1216,14 @@
 				_voiceRecog.onresult = (event) => {
 					_hideVoiceOverlay();
 					let found = null;
-					for (let i = 0; i < event.results[0].length; i++) {
-						const transcript = event.results[0][i].transcript;
-						found = _parseSongCommand(transcript);
-						if (found) break;
+					// Solo procesar resultados con confianza >= 0.5
+					const confidence = event.results[0][0]?.confidence || 0;
+					if (confidence >= 0.5) {
+						for (let i = 0; i < event.results[0].length; i++) {
+							const transcript = event.results[0][i].transcript;
+							found = _parseSongCommand(transcript);
+							if (found) break;
+						}
 					}
 					if (found) {
 						const num = found.type === "num" ? found.num : found.song.song;
@@ -1353,8 +1285,6 @@
 			}
 
 			function onButton(b) {
-				// Ignorar input hasta que el audio esté desbloqueado
-				if (!_audioUnlocked) return;
 				// NFC active: only X (2) cancels
 				if (S.nfcBusy) {
 					if (b === 2) cancelNFC();
@@ -1394,7 +1324,9 @@
 						}
 					} else if (b === 4) linePrev();
 					else if (b === 5) lineNext();
-					else if (b === 3) nfcWrite();
+					// Mantener Y (3) siempre para búsqueda por voz; usar SELECT (8) para NFC
+					else if (b === 3) startVoiceSearch();
+					else if (b === 8) nfcWrite();
 				}
 			}
 
@@ -1425,15 +1357,6 @@
 				document.getElementById("gp-status").textContent = "⊙ Mando conectado";
 				document.getElementById("gp-status").className = "gp-status";
 				vib([30, 20, 30]);
-				// Si el banner está visible, actualizarlo antes de ocultarlo
-				const prompt = document.getElementById("audio-prompt");
-				if (prompt.classList.contains("on")) {
-					prompt.querySelector(".ap-icon").textContent = "🎮";
-					prompt.querySelector(".ap-msg").textContent = "Mando conectado";
-					prompt.querySelector(".ap-sub").textContent = "";
-				}
-				// Desbloquear primero; luego hablar (el audio ya está disponible)
-				_unlockAudio();
 				speak("Mando conectado.", true);
 				speak(_currentTitleText());
 				// Marcar el estado actual del mando para que el botón que lo
@@ -1484,6 +1407,65 @@
 				);
 			}
 
+			// Precache / update progress UI handler (receives messages from the SW)
+			if ("serviceWorker" in navigator) {
+				navigator.serviceWorker.addEventListener("message", (ev) => {
+					const msg = ev.data || {};
+					if (msg.type === "PRECACHE_PROGRESS") {
+						_showPrecache(msg.done, msg.total, "Descargando canciones");
+					} else if (msg.type === "PRECACHE_DONE") {
+						_showPrecache(msg.total, msg.total, "Descargando canciones");
+						setTimeout(() => _hidePrecache(), 900);
+						toast("Todas las canciones descargadas ✓", 3000);
+					} else if (msg.type === "UPDATE_PROGRESS") {
+						_showPrecache(msg.done, msg.total, "Comprobando cambios");
+					} else if (msg.type === "UPDATE_DONE") {
+						_showPrecache(msg.total, msg.total, "Comprobando cambios");
+						setTimeout(() => _hidePrecache(), 900);
+						toast("Comprobación finalizada ✓", 2500);
+					}
+				});
+
+				function _showPrecache(done, total, label) {
+					const bar = document.getElementById("precache-bar");
+					const inner = document.getElementById("precache-inner");
+					const text = document.getElementById("precache-text");
+					if (!bar || !inner || !text) return;
+					bar.style.display = "block";
+					const pct = total ? Math.round((done / total) * 100) : 0;
+					inner.style.width = pct + "%";
+					text.textContent = `${label}: ${done}/${total} (${pct}%)`;
+				}
+
+				function _hidePrecache() {
+					const bar = document.getElementById("precache-bar");
+					const inner = document.getElementById("precache-inner");
+					const text = document.getElementById("precache-text");
+					if (!bar || !inner || !text) return;
+					inner.style.width = "100%";
+					setTimeout(() => (bar.style.display = "none"), 400);
+				}
+
+				// Ask SW to check for updates once ready
+				navigator.serviceWorker.ready.then(() => {
+					if (navigator.serviceWorker.controller) {
+						navigator.serviceWorker.controller.postMessage({
+							type: "CHECK_FOR_UPDATES"
+						});
+					}
+				});
+
+				// When the browser comes online, trigger an update check
+				window.addEventListener("online", () => {
+					toast("Conexión restablecida. Comprobando canciones...", 2500);
+					if (navigator.serviceWorker.controller) {
+						navigator.serviceWorker.controller.postMessage({
+							type: "CHECK_FOR_UPDATES"
+						});
+					}
+				});
+			}
+
 			/* =============================================================
    INIT
 ============================================================= */
@@ -1498,6 +1480,58 @@
 
 				checkInitialGamepad();
 				gpLoop();
+
+				// On-screen button handlers (touch / click)
+				try {
+					const bPrev = document.getElementById("btn-prev-line");
+					const bNext = document.getElementById("btn-next-line");
+					const bBack = document.getElementById("btn-back-menu");
+					if (bPrev)
+						bPrev.addEventListener("click", (e) => {
+							e.preventDefault();
+							linePrev();
+						});
+					if (bNext)
+						bNext.addEventListener("click", (e) => {
+							e.preventDefault();
+							lineNext();
+						});
+					if (bBack)
+						bBack.addEventListener("click", (e) => {
+							e.preventDefault();
+							backToMenu();
+						});
+				} catch (e) {}
+
+				// Menu arrow click/keyboard handlers
+				try {
+					const catPrevEl = document.getElementById("cat-prev");
+					const catNextEl = document.getElementById("cat-next");
+					if (catPrevEl) {
+						catPrevEl.addEventListener("click", (ev) => {
+							ev.preventDefault();
+							catPrev();
+						});
+						catPrevEl.addEventListener("keydown", (ev) => {
+							if (ev.key === "Enter" || ev.key === " ") {
+								ev.preventDefault();
+								catPrev();
+							}
+						});
+					}
+					if (catNextEl) {
+						catNextEl.addEventListener("click", (ev) => {
+							ev.preventDefault();
+							catNext();
+						});
+						catNextEl.addEventListener("keydown", (ev) => {
+							if (ev.key === "Enter" || ev.key === " ") {
+								ev.preventDefault();
+								catNext();
+							}
+						});
+					}
+				} catch (e) {}
 
 				// Check for direct song URL param
 				const params = new URLSearchParams(window.location.search);
