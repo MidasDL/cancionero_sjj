@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="theme-color" content="#000000" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+		<meta name="apple-mobile-web-app-title" content="Cancionero" />
+		<link rel="manifest" href="manifest.json" />
+		<link rel="icon" href="icon/favicon.ico" />
+		<link rel="apple-touch-icon" href="icon/apple-touch-icon.png" />
+		<title>Cantemos con Gozo a Jehová</title>
+		<style>
+			:root {
+				--bg: #000;
+				--fg: #00ff66;
+				--fg-dim: #008a38;
+				--neon-search: #00ff66;
+				--neon-page: #00d4ff;
+				--neon-back: #ff4fd8;
+				--neon-nfc: #ff4fd8;
+				--neon-line: #ff7a1a;
+				--focus: #ffee00;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				color: var(--fg);
+				font-family: "Courier New", ui-monospace, monospace;
+				font-size: 20px;
+			}
+
+			html,
+			body {
+				background: var(--bg);
+				min-height: 100dvh;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			body {
+				display: flex;
+				flex-direction: column;
+				min-height: 100dvh;
+				padding: 12px;
+				gap: 10px;
+				position: relative;
+			}
+
+			/* ── Top bars (fixed) ─────────────────────────────── */
+			.top-row {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 20;
+				background: var(--bg);
+				padding: 12px;
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				gap: 10px;
+			}
+
+			.top-left,
+			.top-right {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			/* ── Buttons (neon) ───────────────────────────────── */
+			button {
+				font-family: inherit;
+				font-size: 17px;
+				font-weight: 700;
+				border: 3px solid currentColor;
+				background: transparent;
+				cursor: pointer;
+				padding: 14px 16px;
+				min-width: 110px;
+				min-height: 60px;
+				border-radius: 8px;
+				color: var(--fg);
+				transition:
+					background 0.1s,
+					transform 0.05s;
+			}
+
+			button:focus {
+				outline: none;
+			}
+
+			button:active {
+				transform: scale(0.97);
+			}
+
+			.btn-neon-search {
+				color: var(--neon-search);
+				background: rgba(0, 255, 102, 0.15);
+			}
+
+			.btn-neon-page {
+				color: var(--neon-page);
+				background: rgba(0, 212, 255, 0.15);
+				flex: 1;
+				font-size: 19px;
+				min-height: 80px;
+			}
+
+			.btn-neon-back {
+				color: var(--neon-back);
+				background: rgba(255, 79, 216, 0.15);
+			}
+
+			.btn-neon-nfc {
+				color: var(--neon-nfc);
+				background: rgba(255, 79, 216, 0.15);
+			}
+
+			/* ── Menu view: spacing for fixed header/footer ───── */
+			#menu-view {
+				padding-top: 88px;
+				padding-bottom: 120px;
+			}
+
+			/* ── Menu: song number grid ───────────────────────── */
+			.page-info {
+				text-align: center;
+				font-size: 15px;
+				color: var(--fg-dim);
+				padding: 4px;
+			}
+
+			.song-grid {
+				flex: 1;
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+				gap: 8px;
+				align-content: start;
+				padding: 10px 0;
+			}
+
+			.song-cell {
+				aspect-ratio: 1 / 1;
+				background: transparent;
+				border: 3px solid #7a2dff;
+				color: var(--fg);
+				font-family: inherit;
+				font-size: 22px;
+				font-weight: 700;
+				border-radius: 6px;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 4px;
+				min-height: 52px;
+				min-width: 0;
+			}
+
+			.song-cell:focus {
+				outline: none;
+			}
+
+			.song-cell[aria-hidden="true"] {
+				visibility: hidden;
+			}
+
+			/* ── Fixed footer (menu) ──────────────────────────── */
+			#menu-footer {
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				z-index: 20;
+				background: var(--bg);
+				padding: 8px 12px 12px;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+			}
+
+			/* ── Pagination bar ───────────────────────────────── */
+			.pagination {
+				display: flex;
+				gap: 10px;
+			}
+
+			/* ── Song view ────────────────────────────────────── */
+			#song-view {
+				display: none;
+				flex-direction: column;
+				flex: 1;
+				gap: 10px;
+				padding-top: 152px;
+			}
+
+			.song-body {
+				flex: 1;
+				display: flex;
+				gap: 12px;
+				min-height: 0;
+			}
+
+			.song-lines {
+				flex: 1;
+				overflow-y: auto;
+				padding: 14px 10px;
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				scroll-behavior: smooth;
+			}
+
+			.song-line {
+				font-family: inherit;
+				font-size: inherit;
+				font-weight: normal;
+				color: inherit;
+				background: transparent;
+				border: none;
+				text-align: left;
+				line-height: 1.5;
+				padding: 10px 12px;
+				border-radius: 6px;
+				cursor: default;
+				width: 100%;
+			}
+
+			.song-line:focus {
+				outline: none;
+			}
+
+			/* ── Overlays ─────────────────────────────────────── */
+			.overlay {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.95);
+				display: none;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 20px;
+				z-index: 100;
+				padding: 20px;
+				text-align: center;
+			}
+
+			.overlay.on {
+				display: flex;
+			}
+
+			.overlay-title {
+				font-size: 26px;
+				color: var(--fg);
+				font-weight: 700;
+			}
+
+			.overlay-sub {
+				font-size: 16px;
+				color: var(--fg-dim);
+			}
+
+			#toast {
+				position: fixed;
+				bottom: 20px;
+				left: 50%;
+				transform: translateX(-50%);
+				background: #001a0a;
+				color: var(--fg);
+				border: 2px solid var(--fg);
+				padding: 12px 20px;
+				border-radius: 8px;
+				font-size: 16px;
+				max-width: 85vw;
+				text-align: center;
+				opacity: 0;
+				transition: opacity 0.2s;
+				z-index: 200;
+				pointer-events: none;
+			}
+
+			#toast.show {
+				opacity: 1;
+			}
+
+			.status {
+				font-size: 13px;
+				color: var(--fg-dim);
+				text-align: center;
+				padding: 4px 0;
+			}
+
+			.sr-only {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				overflow: hidden;
+				clip: rect(0, 0, 0, 0);
+				white-space: nowrap;
+			}
+
+			/* Precache bar */
+			#precache-bar {
+				position: fixed;
+				left: 12px;
+				right: 12px;
+				bottom: 16px;
+				height: 22px;
+				background: rgba(0, 255, 102, 0.08);
+				border: 2px solid var(--fg-dim);
+				border-radius: 6px;
+				overflow: hidden;
+				display: none;
+				z-index: 50;
+			}
+			#precache-inner {
+				height: 100%;
+				width: 0%;
+				background: var(--fg);
+				transition: width 300ms linear;
+			}
+			#precache-text {
+				position: absolute;
+				inset: 0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 12px;
+				color: #000;
+				font-weight: 700;
+			}
+		</style>
+	</head>
+	<body>
+		<div
+			id="aria-live"
+			class="sr-only"
+			aria-live="polite"
+			aria-atomic="true"
+		></div>
+
+		<!-- ══════════════════════ MENU VIEW ══════════════════════ -->
+		<main
+			id="menu-view"
+			style="display: flex; flex-direction: column; flex: 1; gap: 10px"
+		>
+			<header class="top-row">
+				<div class="top-left" aria-hidden="true"></div>
+				<div class="top-right">
+					<button
+						id="btn-search-menu"
+						class="btn-neon-search"
+						aria-label="Buscar canción por voz"
+					>
+						Buscar
+					</button>
+				</div>
+			</header>
+
+			<div
+				class="song-grid"
+				id="song-grid"
+				role="grid"
+				aria-label="Lista de canciones"
+			></div>
+
+			<div id="menu-footer">
+				<nav class="pagination" aria-label="Paginación">
+					<button
+						id="btn-prev-page"
+						class="btn-neon-page"
+						aria-label="Página anterior"
+					>
+						Anterior
+					</button>
+					<button
+						id="btn-next-page"
+						class="btn-neon-page"
+						aria-label="Página siguiente"
+					>
+						Siguiente
+					</button>
+				</nav>
+				<div class="status" id="gp-status"></div>
+			</div>
+		</main>
+
+		<!-- ══════════════════════ SONG VIEW ══════════════════════ -->
+		<section id="song-view" aria-labelledby="song-heading">
+			<header class="top-row">
+				<div class="top-left">
+					<button
+						id="btn-back"
+						class="btn-neon-back"
+						aria-label="Regresar al menú"
+					>
+						Regresar
+					</button>
+				</div>
+				<div class="top-right">
+					<button
+						id="btn-search-song"
+						class="btn-neon-search"
+						aria-label="Buscar canción por voz"
+					>
+						Buscar
+					</button>
+					<button
+						id="btn-save-nfc"
+						class="btn-neon-nfc"
+						aria-label="Guardar canción en etiqueta NFC"
+					>
+						Guardar NFC
+					</button>
+				</div>
+			</header>
+
+			<h1 id="song-heading" class="sr-only"></h1>
+
+			<div class="song-body">
+				<div class="song-lines" id="song-lines"></div>
+			</div>
+		</section>
+
+		<!-- Overlays -->
+		<div id="nfc-overlay" class="overlay" role="dialog" aria-label="NFC">
+			<div class="overlay-title" id="nfc-msg">Acerque la etiqueta NFC</div>
+			<div class="overlay-sub" id="nfc-sub">
+				Presione X o toque la pantalla para cancelar
+			</div>
+		</div>
+
+		<div
+			id="voice-overlay"
+			class="overlay"
+			role="dialog"
+			aria-label="Búsqueda por voz"
+		>
+			<div class="overlay-title">Escuchando…</div>
+			<div class="overlay-sub">Diga el número o título de la canción</div>
+		</div>
+
+		<div id="toast" role="status"></div>
+
+		<div id="precache-bar">
+			<div id="precache-inner"></div>
+			<div id="precache-text"></div>
+		</div>
+
+		<script>
+			/* ═════════════════ AUDIO (earcons) ═════════════════ */
+			const SND = {};
+			["click", "enter", "back"].forEach((n) => {
+				const a = new Audio(`sounds/${n}.mp3`);
+				a.preload = "auto";
+				SND[n] = a;
+			});
+			function snd(name) {
+				try {
+					const a = SND[name];
+					if (a) {
+						a.currentTime = 0;
+						a.play().catch(() => {});
+					}
+				} catch (e) {}
+			}
+
+			/* ═════════════════ HAPTICS ═════════════════ */
+			function vib(pat) {
+				if (navigator.vibrate) navigator.vibrate(pat);
+			}
+			const V = {
+				nav: [30],
+				enter: [60, 30, 60],
+				back: [80],
+				err: [100, 50, 100, 50, 100],
+				nfc: [40, 30, 40],
+				end: [60, 40, 60, 40, 120]
+			};
+
+			/* ═════════════════ STATE ═════════════════ */
+			const S = {
+				mode: "MENU",
+				songs: [],
+				page: 0,
+				pageSize: 48,
+				songNum: null,
+				lines: [],
+				nfcBusy: false
+			};
+
+			function getGridCols() {
+				const grid = document.getElementById("song-grid");
+				if (!grid) return 6;
+				const val = window
+					.getComputedStyle(grid)
+					.getPropertyValue("grid-template-columns");
+				if (!val || val === "none") return 6;
+				return val.trim().split(/\s+/).length;
+			}
+
+			function computePageSize() {
+				return getGridCols() * 8;
+			}
+
+			const BASE_URL = (() => {
+				const h = window.location.href.replace(/[?#].*$/, "");
+				return h.endsWith("/") ? h : h.replace(/\/[^/]*$/, "/");
+			})();
+
+			function toast(msg, dur = 3000) {
+				const el = document.getElementById("toast");
+				el.textContent = msg;
+				el.classList.add("show");
+				clearTimeout(toast._t);
+				toast._t = setTimeout(() => el.classList.remove("show"), dur);
+			}
+
+			function ariaAnn(t) {
+				const el = document.getElementById("aria-live");
+				el.textContent = "";
+				setTimeout(() => (el.textContent = t), 40);
+			}
+
+			/* ═════════════════ DATA ═════════════════ */
+			async function loadData() {
+				const r = await fetch("data/songs.json");
+				S.songs = await r.json();
+			}
+
+			async function loadLines(num) {
+				const pad = String(num).padStart(3, "0");
+				try {
+					const r = await fetch(`data/${pad}.txt`);
+					if (!r.ok) throw 0;
+					const txt = await r.text();
+					return txt
+						.split("\n")
+						.map((l) => l.trim())
+						.filter(Boolean);
+				} catch {
+					return ["Letra no disponible para esta canción."];
+				}
+			}
+
+			/* ═════════════════ MENU RENDER ═════════════════ */
+			const totalPages = () =>
+				Math.max(1, Math.ceil(S.songs.length / S.pageSize));
+
+			function renderMenu() {
+				S.pageSize = computePageSize();
+				const grid = document.getElementById("song-grid");
+				grid.innerHTML = "";
+				const start = S.page * S.pageSize;
+				const end = Math.min(start + S.pageSize, S.songs.length);
+
+				for (let i = start; i < end; i++) {
+					const s = S.songs[i];
+					const b = document.createElement("button");
+					b.className = "song-cell";
+					b.type = "button";
+					b.textContent = s.song;
+					b.setAttribute("aria-label", `Canción ${s.song}. ${s.title}`);
+					b.dataset.songNum = s.song;
+					b.dataset.gridIdx = i - start;
+					b.addEventListener("click", () => openSong(s.song));
+					grid.appendChild(b);
+				}
+
+				// Fill empty cells to keep grid shape
+				const filled = end - start;
+				for (let j = filled; j < S.pageSize; j++) {
+					const e = document.createElement("div");
+					e.className = "song-cell";
+					e.setAttribute("aria-hidden", "true");
+					grid.appendChild(e);
+				}
+
+				const first = S.songs[start]?.song || "";
+				const last = S.songs[end - 1]?.song || "";
+				document.getElementById("page-info").textContent =
+					`Página ${S.page + 1} de ${totalPages()} · Canciones ${first}–${last}`;
+
+				// Enable/disable pagination
+				document.getElementById("btn-prev-page").disabled = S.page === 0;
+				document.getElementById("btn-next-page").disabled =
+					S.page >= totalPages() - 1;
+			}
+
+			/* ═════════════════ PAGINATION ═════════════════ */
+			function pagePrev() {
+				if (S.page === 0) {
+					vib(V.err);
+					ariaAnn("Primera página");
+					return;
+				}
+				snd("click");
+				vib(V.nav);
+				S.page--;
+				renderMenu();
+				ariaAnn(`Página ${S.page + 1} de ${totalPages()}`);
+				// Focus first cell for screen reader
+				setTimeout(() => {
+					const first = document.querySelector(".song-cell[data-song-num]");
+					if (first) first.focus();
+				}, 60);
+			}
+
+			function pageNext() {
+				if (S.page >= totalPages() - 1) {
+					vib(V.err);
+					ariaAnn("Última página");
+					return;
+				}
+				snd("click");
+				vib(V.nav);
+				S.page++;
+				renderMenu();
+				ariaAnn(`Página ${S.page + 1} de ${totalPages()}`);
+				setTimeout(() => {
+					const first = document.querySelector(".song-cell[data-song-num]");
+					if (first) first.focus();
+				}, 60);
+			}
+
+			/* ═════════════════ VIEW SWITCH ═════════════════ */
+			function showMenu() {
+				S.mode = "MENU";
+				document.getElementById("menu-view").style.display = "flex";
+				document.getElementById("song-view").style.display = "none";
+			}
+
+			function showSong() {
+				S.mode = "SONG";
+				document.getElementById("menu-view").style.display = "none";
+				document.getElementById("song-view").style.display = "flex";
+			}
+
+			/* ═════════════════ SONG OPEN/RENDER ═════════════════ */
+			async function openSong(num) {
+				const song = S.songs.find((s) => s.song === num);
+				if (!song) return;
+
+				snd("enter");
+				vib(V.enter);
+
+				S.songNum = num;
+				S.lines = await loadLines(num);
+
+				const pad = String(num).padStart(3, "0");
+				document.getElementById("song-heading").textContent =
+					`Canción ${num}. ${song.title}`;
+
+				try {
+					history.replaceState({ num }, "", `?c=${pad}`);
+				} catch (e) {}
+
+				renderSong();
+				showSong();
+
+				// Focus first line so screen reader begins reading
+				setTimeout(() => {
+					const first = document.querySelector("#song-lines .song-line");
+					if (first) first.focus();
+				}, 80);
+			}
+
+			function renderSong() {
+				const container = document.getElementById("song-lines");
+				container.innerHTML = "";
+				S.lines.forEach((text, idx) => {
+					const d = document.createElement("button");
+					d.className = "song-line";
+					d.type = "button";
+					d.dataset.lineIdx = idx;
+					d.textContent = text;
+					container.appendChild(d);
+				});
+			}
+
+			function backToMenu() {
+				snd("back");
+				vib(V.back);
+				showMenu();
+				try {
+					history.replaceState({}, "", BASE_URL);
+				} catch (e) {}
+				ariaAnn("Menú principal");
+				setTimeout(() => {
+					const cell = document.querySelector(
+						`.song-cell[data-song-num="${S.songNum}"]`
+					);
+					if (cell) cell.focus();
+					else {
+						const first = document.querySelector(".song-cell[data-song-num]");
+						if (first) first.focus();
+					}
+				}, 60);
+			}
+
+			/* ═════════════════ LINE NAV (gamepad + buttons) ═════════════════ */
+			function getFocusedLineIdx() {
+				const el = document.activeElement;
+				if (el && el.classList && el.classList.contains("song-line")) {
+					return parseInt(el.dataset.lineIdx, 10);
+				}
+				return -1;
+			}
+
+			function focusLine(i) {
+				const lines = document.querySelectorAll("#song-lines .song-line");
+				if (!lines.length) return;
+				const clamped = Math.max(0, Math.min(lines.length - 1, i));
+				lines[clamped].focus();
+				lines[clamped].scrollIntoView({ block: "center", behavior: "smooth" });
+			}
+
+			function lineUp() {
+				const cur = getFocusedLineIdx();
+				if (cur <= 0) {
+					vib(V.err);
+					focusLine(0);
+					return;
+				}
+				snd("click");
+				vib(V.nav);
+				focusLine(cur - 1);
+			}
+
+			function lineDown() {
+				const cur = getFocusedLineIdx();
+				const last = S.lines.length - 1;
+				if (cur < 0) {
+					focusLine(0);
+					return;
+				}
+				if (cur >= last) {
+					vib(V.end);
+					ariaAnn("Fin de la canción");
+					return;
+				}
+				snd("click");
+				vib(V.nav);
+				focusLine(cur + 1);
+			}
+
+			/* ═════════════════ GRID NAV (gamepad) ═════════════════ */
+			function getFocusedGridIdx() {
+				const el = document.activeElement;
+				if (
+					el &&
+					el.classList &&
+					el.classList.contains("song-cell") &&
+					el.dataset.songNum
+				) {
+					return parseInt(el.dataset.gridIdx, 10);
+				}
+				return -1;
+			}
+
+			function focusGridIdx(i) {
+				const cells = document.querySelectorAll(".song-cell[data-song-num]");
+				if (!cells.length) return;
+				const clamped = Math.max(0, Math.min(cells.length - 1, i));
+				cells[clamped].focus();
+			}
+
+			function gridMove(dx, dy) {
+				const cur = getFocusedGridIdx();
+				if (cur < 0) {
+					focusGridIdx(0);
+					return;
+				}
+				const cols = getGridCols();
+				const row = Math.floor(cur / cols);
+				const col = cur % cols;
+				const newRow = row + dy;
+				const newCol = col + dx;
+				const cells = document.querySelectorAll(".song-cell[data-song-num]");
+				const newIdx = newRow * cols + newCol;
+				if (
+					newCol < 0 ||
+					newCol >= cols ||
+					newRow < 0 ||
+					newIdx >= cells.length
+				) {
+					vib(V.err);
+					return;
+				}
+				snd("click");
+				vib(V.nav);
+				focusGridIdx(newIdx);
+			}
+
+			function gridActivate() {
+				const el = document.activeElement;
+				if (el && el.dataset && el.dataset.songNum) {
+					openSong(parseInt(el.dataset.songNum, 10));
+				}
+			}
+
+			/* ═════════════════ NFC ═════════════════ */
+			let nfcAbort = null;
+
+			async function nfcRead() {
+				if (!("NDEFReader" in window)) return;
+				try {
+					nfcAbort = new AbortController();
+					S.nfcBusy = true;
+					document.getElementById("nfc-msg").textContent =
+						"Acerque la etiqueta NFC al dispositivo";
+					document.getElementById("nfc-overlay").classList.add("on");
+					vib(V.nfc);
+					const reader = new NDEFReader();
+					await reader.scan({ signal: nfcAbort.signal });
+					reader.addEventListener("reading", ({ message }) => {
+						for (const rec of message.records) {
+							const raw = new TextDecoder().decode(rec.data);
+							const m = raw.match(/[?&]c=0*(\d+)/);
+							if (m) {
+								const num = parseInt(m[1], 10);
+								cancelNFC();
+								vib([50, 30, 50, 30, 80]);
+								navigateToSong(num);
+								return;
+							}
+						}
+						toast("Etiqueta no reconocida");
+						vib(V.err);
+						cancelNFC();
+					});
+					reader.addEventListener("readingerror", () => {
+						toast("Error leyendo etiqueta");
+						vib(V.err);
+						cancelNFC();
+					});
+				} catch (e) {
+					if (e.name !== "AbortError") {
+						toast("NFC: " + e.message);
+						vib(V.err);
+					}
+					cancelNFC();
+				}
+			}
+
+			async function nfcWrite() {
+				if (!("NDEFReader" in window)) {
+					toast("NFC no disponible en este dispositivo");
+					vib(V.err);
+					return;
+				}
+				if (!S.songNum) return;
+				const pad = String(S.songNum).padStart(3, "0");
+				const songUrl =
+					window.location.origin +
+					BASE_URL.replace(window.location.origin, "") +
+					`?c=${pad}`;
+				try {
+					nfcAbort = new AbortController();
+					S.nfcBusy = true;
+					document.getElementById("nfc-msg").textContent =
+						`Acerque etiqueta para guardar la canción ${S.songNum}`;
+					document.getElementById("nfc-overlay").classList.add("on");
+					vib(V.nfc);
+					const writer = new NDEFReader();
+					await writer.write(
+						{ records: [{ recordType: "url", data: songUrl }] },
+						{ signal: nfcAbort.signal }
+					);
+					cancelNFC();
+					vib([50, 30, 80]);
+					toast("Guardado en etiqueta NFC");
+				} catch (e) {
+					if (e.name !== "AbortError") {
+						toast("Error al escribir NFC");
+						vib(V.err);
+					}
+					cancelNFC();
+				}
+			}
+
+			function cancelNFC() {
+				if (nfcAbort) {
+					nfcAbort.abort();
+					nfcAbort = null;
+				}
+				S.nfcBusy = false;
+				document.getElementById("nfc-overlay").classList.remove("on");
+			}
+
+			document
+				.getElementById("nfc-overlay")
+				.addEventListener("click", cancelNFC);
+
+			function navigateToSong(num) {
+				const idx = S.songs.findIndex((s) => s.song === num);
+				if (idx === -1) return;
+				S.page = Math.floor(idx / S.pageSize);
+				renderMenu();
+				openSong(num);
+			}
+
+			/* ═════════════════ VOICE SEARCH ═════════════════ */
+			const _UNITS = {
+				cero: 0,
+				uno: 1,
+				una: 1,
+				dos: 2,
+				tres: 3,
+				cuatro: 4,
+				cinco: 5,
+				seis: 6,
+				siete: 7,
+				ocho: 8,
+				nueve: 9,
+				diez: 10,
+				once: 11,
+				doce: 12,
+				trece: 13,
+				catorce: 14,
+				quince: 15,
+				dieciseis: 16,
+				diecisiete: 17,
+				dieciocho: 18,
+				diecinueve: 19
+			};
+			const _TENS = {
+				veinte: 20,
+				treinta: 30,
+				cuarenta: 40,
+				cincuenta: 50,
+				sesenta: 60,
+				setenta: 70,
+				ochenta: 80,
+				noventa: 90
+			};
+			const _TWENTIES = {
+				veintiuno: 21,
+				veintidos: 22,
+				veintitres: 23,
+				veinticuatro: 24,
+				veinticinco: 25,
+				veintiseis: 26,
+				veintisiete: 27,
+				veintiocho: 28,
+				veintinueve: 29
+			};
+
+			function _norm(t) {
+				return t
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, "");
+			}
+
+			function _parseNum(raw) {
+				const t = _norm(raw).trim();
+				const dm = t.match(/^(\d{1,3})$/);
+				if (dm) return parseInt(dm[1], 10);
+				if (_UNITS[t] !== undefined) return _UNITS[t];
+				if (_TENS[t] !== undefined) return _TENS[t];
+				if (_TWENTIES[t] !== undefined) return _TWENTIES[t];
+				const cm = t.match(/^cien(?:to)?\s*(.*)/);
+				if (cm) {
+					const rest = cm[1].replace(/^y\s*/, "").trim();
+					if (!rest) return 100;
+					const r = _parseNum(rest);
+					if (!isNaN(r)) return 100 + r;
+				}
+				const pm = t.match(/^(\w+)\s+y\s+(\w+)$/);
+				if (pm) {
+					const ten = _TENS[pm[1]];
+					const unit = _UNITS[pm[2]];
+					if (ten !== undefined && unit !== undefined) return ten + unit;
+				}
+				const lm = t.match(/^cien(?:to)?\s+(\w+)(?:\s+y\s+(\w+))?$/);
+				if (lm) {
+					const ten = _TENS[lm[1]] || 0;
+					const unit = lm[2] ? _UNITS[lm[2]] || 0 : 0;
+					if (_TENS[lm[1]] !== undefined) return 100 + ten + unit;
+				}
+				return NaN;
+			}
+
+			function _parseSongCommand(transcript) {
+				const t = _norm(transcript);
+				const cleaned = t
+					.replace(/\bcancion\b/g, "")
+					.replace(/\bnumero\b/g, "")
+					.replace(/\bel\b|\bla\b|\blas\b|\blos\b/g, "")
+					.replace(/\babrir\b|\bir\s+a\b|\bpon\b|\bponer\b/g, "")
+					.trim();
+				const num = _parseNum(cleaned);
+				if (!isNaN(num) && num >= 1 && num <= 162) return { type: "num", num };
+				const digitM = t.match(/\b(\d{1,3})\b/);
+				if (digitM) {
+					const n = parseInt(digitM[1], 10);
+					if (n >= 1 && n <= 162) return { type: "num", num: n };
+				}
+				const q = t.replace(/[^\w\s]/g, "");
+				const qWords = q.split(/\s+/).filter((w) => w.length > 2);
+				if (qWords.length) {
+					let best = null,
+						bestScore = 0;
+					for (const s of S.songs) {
+						const titleNorm = _norm(s.title).replace(/[^\w\s]/g, "");
+						const tWords = titleNorm.split(/\s+/);
+						let hits = 0;
+						for (const w of qWords) {
+							if (tWords.some((tw) => tw.includes(w) || w.includes(tw))) hits++;
+						}
+						const score = hits / qWords.length;
+						if (score > bestScore && score >= 0.5) {
+							bestScore = score;
+							best = s;
+						}
+					}
+					if (best) return { type: "song", song: best };
+				}
+				return null;
+			}
+
+			let _voiceRecog = null;
+
+			function startVoiceSearch() {
+				const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+				if (!SR) {
+					toast("Reconocimiento de voz no disponible");
+					return;
+				}
+				if (_voiceRecog) {
+					_voiceRecog.abort();
+					_voiceRecog = null;
+				}
+				_voiceRecog = new SR();
+				_voiceRecog.lang = "es-419";
+				_voiceRecog.interimResults = false;
+				_voiceRecog.maxAlternatives = 5;
+				document.getElementById("voice-overlay").classList.add("on");
+				vib(V.nfc);
+				_voiceRecog.onresult = (event) => {
+					_hideVoiceOverlay();
+					let found = null;
+					const confidence = event.results[0][0]?.confidence || 0;
+					if (confidence >= 0.5) {
+						for (let i = 0; i < event.results[0].length; i++) {
+							found = _parseSongCommand(event.results[0][i].transcript);
+							if (found) break;
+						}
+					}
+					if (found) {
+						const num = found.type === "num" ? found.num : found.song.song;
+						navigateToSong(num);
+					} else {
+						vib(V.err);
+						toast("No se reconoció. Intente de nuevo.");
+					}
+					_voiceRecog = null;
+				};
+				_voiceRecog.onerror = (event) => {
+					_hideVoiceOverlay();
+					if (event.error !== "aborted") {
+						vib(V.err);
+						toast("Error de voz: " + event.error);
+					}
+					_voiceRecog = null;
+				};
+				_voiceRecog.onend = () => {
+					_hideVoiceOverlay();
+					_voiceRecog = null;
+				};
+				_voiceRecog.start();
+			}
+
+			function cancelVoiceSearch() {
+				if (_voiceRecog) {
+					_voiceRecog.abort();
+					_voiceRecog = null;
+				}
+				_hideVoiceOverlay();
+			}
+
+			function _hideVoiceOverlay() {
+				document.getElementById("voice-overlay").classList.remove("on");
+			}
+
+			document
+				.getElementById("voice-overlay")
+				.addEventListener("click", cancelVoiceSearch);
+
+			/* ═════════════════ GAMEPAD (shortcuts) ═════════════════ */
+			const prevBtns = {};
+
+			function isJustPressed(gpIdx, btnIdx, pressed) {
+				const key = `${gpIdx}_${btnIdx}`;
+				const was = prevBtns[key] || false;
+				const just = pressed && !was;
+				prevBtns[key] = pressed;
+				return just;
+			}
+
+			function seedGamepad(gp) {
+				gp.buttons.forEach((btn, i) => {
+					prevBtns[gp.index + "_" + i] = btn.pressed;
+				});
+			}
+
+			function onButton(b) {
+				if (S.nfcBusy) {
+					if (b === 2) cancelNFC();
+					return;
+				}
+				if (_voiceRecog) {
+					if (b === 2) cancelVoiceSearch();
+					return;
+				}
+
+				if (S.mode === "MENU") {
+					// A → abrir
+					if (b === 0) gridActivate();
+					// X → no aplica (no hay back en menú)
+					// Y → búsqueda por voz
+					else if (b === 3) startVoiceSearch();
+					// LB → página anterior
+					else if (b === 4) pagePrev();
+					// RB → página siguiente
+					else if (b === 5) pageNext();
+					// D-pad
+					else if (b === 12) gridMove(0, -1);
+					else if (b === 13) gridMove(0, 1);
+					else if (b === 14) gridMove(-1, 0);
+					else if (b === 15) gridMove(1, 0);
+				} else if (S.mode === "SONG") {
+					// X → regresar
+					if (b === 2) backToMenu();
+					// Y → búsqueda por voz
+					else if (b === 3) startVoiceSearch();
+					// LB → línea anterior
+					else if (b === 4) lineUp();
+					// RB → línea siguiente
+					else if (b === 5) lineDown();
+					// D-pad up/down también
+					else if (b === 12) lineUp();
+					else if (b === 13) lineDown();
+					// SELECT → guardar NFC
+					else if (b === 8) nfcWrite();
+				}
+			}
+
+			let _gpRafId = null;
+			function gpLoop() {
+				const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+				for (const gp of pads) {
+					if (!gp) continue;
+					gp.buttons.forEach((btn, i) => {
+						if (isJustPressed(gp.index, i, btn.pressed)) onButton(i);
+					});
+				}
+				_gpRafId = requestAnimationFrame(gpLoop);
+			}
+
+			document.addEventListener("visibilitychange", () => {
+				if (!document.hidden) {
+					if (_gpRafId !== null) cancelAnimationFrame(_gpRafId);
+					_gpRafId = null;
+					gpLoop();
+				}
+			});
+
+			window.addEventListener("gamepadconnected", (e) => {
+				document.getElementById("gp-status").textContent = "Mando conectado";
+				vib([30, 20, 30]);
+				seedGamepad(e.gamepad);
+			});
+			window.addEventListener("gamepaddisconnected", () => {
+				document.getElementById("gp-status").textContent = "";
+			});
+
+			function checkInitialGamepad() {
+				const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+				for (const gp of pads) {
+					if (gp) {
+						document.getElementById("gp-status").textContent =
+							"Mando conectado";
+						seedGamepad(gp);
+						break;
+					}
+				}
+			}
+
+			/* ═════════════════ SERVICE WORKER ═════════════════ */
+			if ("serviceWorker" in navigator) {
+				window.addEventListener("load", () =>
+					navigator.serviceWorker
+						.register("sw.js")
+						.catch((e) => console.warn("SW:", e))
+				);
+				navigator.serviceWorker.addEventListener("message", (ev) => {
+					const msg = ev.data || {};
+					if (msg.type === "PRECACHE_PROGRESS")
+						_showPrecache(msg.done, msg.total, "Descargando canciones");
+					else if (msg.type === "PRECACHE_DONE") {
+						_showPrecache(msg.total, msg.total, "Descargando canciones");
+						setTimeout(_hidePrecache, 900);
+						toast("Canciones descargadas", 2500);
+					} else if (msg.type === "UPDATE_PROGRESS")
+						_showPrecache(msg.done, msg.total, "Comprobando cambios");
+					else if (msg.type === "UPDATE_DONE") {
+						_showPrecache(msg.total, msg.total, "Comprobando cambios");
+						setTimeout(_hidePrecache, 900);
+					}
+				});
+				navigator.serviceWorker.ready.then(() => {
+					if (navigator.serviceWorker.controller) {
+						navigator.serviceWorker.controller.postMessage({
+							type: "CHECK_FOR_UPDATES"
+						});
+					}
+				});
+				window.addEventListener("online", () => {
+					if (navigator.serviceWorker.controller) {
+						navigator.serviceWorker.controller.postMessage({
+							type: "CHECK_FOR_UPDATES"
+						});
+					}
+				});
+			}
+
+			function _showPrecache(done, total, label) {
+				const bar = document.getElementById("precache-bar");
+				const inner = document.getElementById("precache-inner");
+				const text = document.getElementById("precache-text");
+				bar.style.display = "block";
+				const pct = total ? Math.round((done / total) * 100) : 0;
+				inner.style.width = pct + "%";
+				text.textContent = `${label}: ${done}/${total} (${pct}%)`;
+			}
+			function _hidePrecache() {
+				const bar = document.getElementById("precache-bar");
+				setTimeout(() => (bar.style.display = "none"), 400);
+			}
+
+			/* ═════════════════ INIT ═════════════════ */
+			async function init() {
+				try {
+					await loadData();
+				} catch (e) {
+					document.body.innerHTML =
+						'<p style="color:#00ff66;padding:24px;font-size:18px">Error cargando datos.</p>';
+					return;
+				}
+
+				// Menu button handlers
+				document
+					.getElementById("btn-search-menu")
+					.addEventListener("click", startVoiceSearch);
+				document
+					.getElementById("btn-prev-page")
+					.addEventListener("click", pagePrev);
+				document
+					.getElementById("btn-next-page")
+					.addEventListener("click", pageNext);
+
+				// Song button handlers
+				document
+					.getElementById("btn-back")
+					.addEventListener("click", backToMenu);
+				document
+					.getElementById("btn-search-song")
+					.addEventListener("click", startVoiceSearch);
+				document
+					.getElementById("btn-save-nfc")
+					.addEventListener("click", nfcWrite);
+
+				checkInitialGamepad();
+				gpLoop();
+
+				// Direct song URL param
+				const params = new URLSearchParams(window.location.search);
+				const cParam = params.get("c");
+				const directN = cParam ? parseInt(cParam, 10) : NaN;
+
+				if (!isNaN(directN) && directN >= 1 && directN <= 162) {
+					navigateToSong(directN);
+				} else {
+					showMenu();
+					renderMenu();
+				}
+
+				// Re-render menu if viewport size changes column count
+				const _gridObs = new ResizeObserver(() => {
+					if (S.mode !== "MENU") return;
+					const newSize = computePageSize();
+					if (newSize !== S.pageSize) {
+						S.page = Math.min(S.page, Math.max(0, totalPages() - 1));
+						renderMenu();
+					}
+				});
+				_gridObs.observe(document.getElementById("song-grid"));
+			}
+
+			init();
+		</script>
+	</body>
+</html>

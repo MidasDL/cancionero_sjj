@@ -16,12 +16,12 @@ Cancionero digital con lectura de letras diseñado para personas ciegas o con di
 
 ## Requisitos
 
-| Elemento | Requisito |
-|---|---|
-| Navegador | Chrome / Edge / Chromium (se recomienda la versión más reciente) |
-| Mando | Cualquier mando compatible con la Gamepad API (Xbox, PlayStation, genérico USB/BT) |
-| Voz (opcional) | Micrófono + permisos de reconocimiento de voz |
-| NFC (opcional) | Dispositivo Android con NFC y Chrome |
+| Elemento       | Requisito                                                                          |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Navegador      | Chrome / Edge / Chromium (se recomienda la versión más reciente)                   |
+| Mando          | Cualquier mando compatible con la Gamepad API (Xbox, PlayStation, genérico USB/BT) |
+| Voz (opcional) | Micrófono + permisos de reconocimiento de voz                                      |
+| NFC (opcional) | Dispositivo Android con NFC y Chrome                                               |
 
 > La app **no funciona correctamente en Safari** porque ese navegador no implementa la Gamepad API ni el reconocimiento de voz de forma completa.
 
@@ -37,29 +37,31 @@ La asignación sigue el **estándar de la Gamepad API** (botones en orden: A, B,
 
 ### Pantalla de menú
 
-| Botón | Acción |
-|---|---|
-| **LB / L1** | Categoría anterior |
-| **RB / R1** | Categoría siguiente |
-| **D-pad Arriba** | Canción anterior en la lista |
-| **D-pad Abajo** | Canción siguiente en la lista |
-| **A** | Abrir la canción seleccionada |
-| **Y** | Buscar canción por voz |
+| Botón            | Acción                        |
+| ---------------- | ----------------------------- |
+| **LB / L1**      | Categoría anterior            |
+| **RB / R1**      | Categoría siguiente           |
+| **D-pad Arriba** | Canción anterior en la lista  |
+| **D-pad Abajo**  | Canción siguiente en la lista |
+| **A**            | Abrir la canción seleccionada |
+| **Y**            | Buscar canción por voz        |
 
 ### Pantalla de canción
 
-| Botón | Acción |
-|---|---|
-| **LB / L1** | Línea anterior |
-| **RB / R1** | Línea siguiente |
-| **X** | Volver al menú |
-| **Y** | Guardar la canción en una etiqueta NFC |
+| Botón       | Acción                                 |
+| ----------- | -------------------------------------- |
+| **LB / L1** | Línea anterior                         |
+| **RB / R1** | Línea siguiente                        |
+| **X**       | Volver al menú                         |
+| **Y**       | Buscar canción por voz                 |
+| **SELECT**  | Guardar la canción en una etiqueta NFC |
 
 > Mientras la lectura por voz o la escritura NFC están activas, el botón **X** las cancela.
 
 ## Cómo funciona la lectura
 
 Al abrir una canción, la aplicación:
+
 1. Anuncia el número y el título de la canción.
 2. Lee automáticamente la primera línea.
 3. Muestra la línea actual resaltada en el centro, con la línea anterior y la siguiente en tono apagado.
@@ -101,24 +103,24 @@ Esto es útil para crear marcadores o enlaces en sistemas externos.
 
 ## Categorías de canciones
 
-| # | Categoría | Canciones |
-|---|---|---|
-| 1 | Jehová | 1–12 |
-| 2 | Jesús y el rescate | 13–20 |
-| 3 | El Reino | 21–24 |
-| 4 | Los ungidos y las otras ovejas | 25–27 |
-| 5 | Nuestra amistad con Jehová | 28–40 |
-| 6 | La oración | 41–47 |
-| 7 | La dedicación | 48–52 |
-| 8 | La predicación | 53–84 |
-| 9 | Las reuniones | 85–93 |
-| 10 | La Biblia | 94–98 |
-| 11 | Nuestros hermanos | 99–103 |
-| 12 | Cualidades cristianas | 104–130 |
-| 13 | La familia y los amigos | 131–138 |
-| 14 | Nuestra esperanza | 139–147 |
-| 15 | La salvación y la resurrección | 148–151 |
-| 16 | Canciones originales | 152–163 |
+| #   | Categoría                      | Canciones |
+| --- | ------------------------------ | --------- |
+| 1   | Jehová                         | 1–12      |
+| 2   | Jesús y el rescate             | 13–20     |
+| 3   | El Reino                       | 21–24     |
+| 4   | Los ungidos y las otras ovejas | 25–27     |
+| 5   | Nuestra amistad con Jehová     | 28–40     |
+| 6   | La oración                     | 41–47     |
+| 7   | La dedicación                  | 48–52     |
+| 8   | La predicación                 | 53–84     |
+| 9   | Las reuniones                  | 85–93     |
+| 10  | La Biblia                      | 94–98     |
+| 11  | Nuestros hermanos              | 99–103    |
+| 12  | Cualidades cristianas          | 104–130   |
+| 13  | La familia y los amigos        | 131–138   |
+| 14  | Nuestra esperanza              | 139–147   |
+| 15  | La salvación y la resurrección | 148–151   |
+| 16  | Canciones originales           | 152–163   |
 
 ## Estructura de archivos
 

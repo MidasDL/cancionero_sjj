@@ -419,6 +419,7 @@
 		<!-- Status bar -->
 		<div id="status-bar">
 			<span>Cancionero SJJ</span>
+			<a href="accessible.html" style="color:var(--muted);font-size:12px;text-decoration:none;border:1px solid var(--border);padding:2px 8px;border-radius:4px;" aria-label="Versión accesible para lectores de pantalla">Accesible</a>
 			<span id="gp-status" class="off">⊙ Sin mando</span>
 		</div>
 
@@ -1156,13 +1157,15 @@
 
 				// Try as number
 				const num = _parseNum(cleaned);
-				if (!isNaN(num) && num >= 1 && num <= 162) return { type: "num", num };
+				if (!isNaN(num) && num >= 1 && num <= 163) return { type: "num", num };
+				if (!isNaN(num) && num > 163) return { type: "out_of_range", num };
 
 				// Also try extracting a digit string anywhere in the original transcript
 				const digitM = t.match(/\b(\d{1,3})\b/);
 				if (digitM) {
 					const n = parseInt(digitM[1], 10);
-					if (n >= 1 && n <= 162) return { type: "num", num: n };
+					if (n >= 1 && n <= 163) return { type: "num", num: n };
+					if (n > 163) return { type: "out_of_range", num: n };
 				}
 
 				// Try title match (fuzzy word overlap)
@@ -1216,28 +1219,40 @@
 				_voiceRecog.onresult = (event) => {
 					_hideVoiceOverlay();
 					let found = null;
-					// Solo procesar resultados con confianza >= 0.5
 					const confidence = event.results[0][0]?.confidence || 0;
-					if (confidence >= 0.5) {
-						for (let i = 0; i < event.results[0].length; i++) {
-							const transcript = event.results[0][i].transcript;
-							found = _parseSongCommand(transcript);
-							if (found) break;
-						}
+					if (confidence < 0.5) {
+						vib(V.err);
+						speak("No se detectó la canción.", true);
+						toast("No se detectó ninguna canción.");
+						_voiceRecog = null;
+						return;
 					}
-					if (found) {
+					for (let i = 0; i < event.results[0].length; i++) {
+						const transcript = event.results[0][i].transcript;
+						found = _parseSongCommand(transcript);
+						if (found) break;
+					}
+					if (found && found.type === "out_of_range") {
+						vib(V.err);
+						speak("Canción fuera de rango. Solo hay ciento sesenta y tres canciones.", true);
+						toast("Canción fuera de rango.");
+					} else if (found) {
 						const num = found.type === "num" ? found.num : found.song.song;
 						navigateToSong(num);
 					} else {
 						vib(V.err);
-						speak("No se encontró la canción. Intente de nuevo.", true);
-						toast("No se reconoció. Intente de nuevo.");
+						speak("No se encontró la canción.", true);
+						toast("No se encontró la canción.");
 					}
 					_voiceRecog = null;
 				};
 				_voiceRecog.onerror = (event) => {
 					_hideVoiceOverlay();
-					if (event.error !== "aborted") {
+					if (event.error === "no-speech") {
+						vib(V.err);
+						speak("No se detectó la canción.", true);
+						toast("No se detectó ninguna canción.");
+					} else if (event.error !== "aborted") {
 						vib(V.err);
 						speak("Error en reconocimiento de voz.", true);
 						toast("Error de voz: " + event.error);
